@@ -1,0 +1,3 @@
+[submodule "apultra-rs"]
+	path = apultra-rs
+	url = https://github.com/snaphat/apultra-rs
