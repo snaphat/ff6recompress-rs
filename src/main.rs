@@ -1,4 +1,4 @@
-use std::{fs, io};
+use std::{error::Error, fs, io};
 
 fn conv_addr(addr: usize) -> usize {
     if addr & 0x408000 != 0 {
@@ -26,7 +26,7 @@ fn unpack_lzss(input: &[u8]) -> (Vec<u8>, usize) {
     let mut s: usize = 0; // source pointer
     let mut buffer: Vec<u8> = vec![0; 0x800];
     let mut b = 0x07DE;
-    let mut line: Vec<u8> = vec![0;34];
+    let mut line: Vec<u8> = vec![0; 34];
     let mut length: usize = src[s] as usize;
     s += 1;
     length |= (src[s] as usize) << 8;
@@ -83,15 +83,30 @@ fn unpack_lzss(input: &[u8]) -> (Vec<u8>, usize) {
     return (dest, s); // (decompressed data, original compressed size)
 }
 
+fn aplib_compress(input: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    let window_size = 1024;
+    let dictionary_size = 0;
+    let flags = 0;
+    let progress = None;
+    let stats = None;
+    apultra::compress(input, window_size, dictionary_size, flags, progress, stats)
+}
+
+fn aplib_decompress(input: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    let dictionary_size = 0;
+    let flags = 0;
+    apultra::decompress(input, dictionary_size, flags)
+}
+
 impl Rom {
     fn _recompress(self, offset: usize) {
         let offset = conv_addr(offset);
         let (uncompressed, compressed_size) = unpack_lzss(&self.rom[offset..]);
-        let a = apultra::compress(&uncompressed, 1024, 0, 0, None, None);
+        let a = aplib_compress(&uncompressed);
         let a = a.unwrap();
-        let b = apultra::decompress(&a, 0, 0);
+        let b = aplib_decompress(&a);
         let b = b.unwrap();
-        let c = apultra::compress(&b, 1024, 0, 0, None, None);
+        let c = aplib_compress(&b);
         let c = c.unwrap();
 
         println!("{}\n{}\n{}\n{}\n", compressed_size, a.len(), b.len(), c.len());
