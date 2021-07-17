@@ -81,5 +81,5 @@ pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize), DecompressionError> 
         }
     }
 
-    return Ok((dest, length)); // (decompressed data, original compressed size)
+    Ok((dest, length)) // (decompressed data, original compressed size)
 }
