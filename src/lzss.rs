@@ -1,5 +1,7 @@
-use apultra::DecompressionError;
+extern crate apultra;
+use self::apultra::DecompressionError;
 use std::cell::RefCell;
+
 pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize), DecompressionError> {
     // Check if the input is long enough to contain length bytes.
     if input.len() < 2 {
