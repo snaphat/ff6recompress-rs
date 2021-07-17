@@ -22,8 +22,10 @@ fn open(path: &str) -> Result<Vec<u8>, io::Error> {
 }
 
 fn unpack_lzss(input: &[u8]) -> Result<(Vec<u8>, usize), DecompressionError> {
-
-    if input.len() < 2 { return Err(DecompressionError); }
+    // Check if the input is long enough to contain length bytes.
+    if input.len() < 2 {
+        return Err(DecompressionError);
+    }
 
     // Get length of compressed data.
     let length = input[0] as usize | (input[1] as usize) << 8;
@@ -31,10 +33,15 @@ fn unpack_lzss(input: &[u8]) -> Result<(Vec<u8>, usize), DecompressionError> {
     // Check if length valid.
     if length == 0 {
         return Err(DecompressionError);
-    };
+    }
+
+    // Check if length is within bounds if input data.
+    if length > input.len() {
+        return Err(DecompressionError);
+    }
 
     // Get slice of data of the exact length (for OoB handling).
-    let mut src = input[2..length+2].iter();
+    let mut src = input[2..length + 2].iter();
     let s = RefCell::new(2); // Source index.
 
     // Smart wrapper for iterator. Returns DecompressionError if iterating past the end of the buffer.
