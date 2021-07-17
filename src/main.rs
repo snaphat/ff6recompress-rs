@@ -1,5 +1,5 @@
-extern crate apultra;
-use std::{error::Error, fs, io};
+use std::{fs, io};
+mod aplib;
 mod lzss;
 
 fn conv_addr(addr: usize) -> usize {
@@ -21,30 +21,15 @@ fn open(path: &str) -> Result<Vec<u8>, io::Error> {
     //file.read_to_string(&mut contents)?;
 }
 
-fn aplib_compress(input: &[u8]) -> Result<Vec<u8>, impl Error> {
-    let window_size = 1024;
-    let dictionary_size = 0;
-    let flags = 0;
-    let progress = None;
-    let stats = None;
-    apultra::compress(input, window_size, dictionary_size, flags, progress, stats)
-}
-
-fn aplib_decompress(input: &[u8]) -> Result<Vec<u8>, impl Error> {
-    let dictionary_size = 0;
-    let flags = 0;
-    apultra::decompress(input, dictionary_size, flags)
-}
-
 impl Rom {
     fn _recompress(self, offset: usize) {
         let offset = conv_addr(offset);
         let (uncompressed, compressed_size) = lzss::decompress(&self.rom[offset..]).unwrap();
-        let a = aplib_compress(&uncompressed);
+        let a = aplib::compress(&uncompressed);
         let a = a.unwrap();
-        let b = aplib_decompress(&a);
+        let b = aplib::decompress(&a);
         let b = b.unwrap();
-        let c = aplib_compress(&b);
+        let c = aplib::compress(&b);
         let c = c.unwrap();
 
         println!(
