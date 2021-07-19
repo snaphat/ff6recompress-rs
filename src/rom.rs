@@ -1,6 +1,8 @@
 use std::error::Error;
 
 mod aplib;
+mod error;
+mod json;
 mod lzss;
 
 fn conv_addr(addr: usize) -> usize {
@@ -20,8 +22,7 @@ impl Rom {
     pub fn new(bytes: Vec<u8>) -> Rom {
         Rom { rom: bytes, saved_bytes: 0 }
     }
-    pub fn _recompress(mut self, offset: usize) -> Result<(Vec<u8>, usize), Box<dyn Error>> {
-        let offset = conv_addr(offset);
+    pub fn _recompress(&mut self, offset: usize) -> Result<(Vec<u8>, usize), Box<dyn Error>> {
         let (uncompressed, orig_compressed_size) = lzss::decompress(&self.rom[offset..])?;
         let recompressed = aplib::compress(&uncompressed)?;
 
@@ -32,6 +33,18 @@ impl Rom {
             self.saved_bytes += save;
         };
 
-        Ok((recompressed, orig_compressed_size))
+        let offset_end = offset + orig_compressed_size;
+        Ok((recompressed, offset_end))
+    }
+
+    pub fn recompress(&mut self, json_entry: &str, bank_offset: usize) -> () {
+        let mut config = json::Config::new();
+        config.extract("cinematicProgram");
+        let offset = conv_addr(bank_offset); // FIXME: ?
+        let (data, offset_end) = self._recompress(offset).unwrap();
+        // json.add_freespace(bank_offset+data.size(), bank_offset+old_size);
+        // json.insert(json_entry, bank_offset, bank_offset+data.size());
+        self.rom.splice(offset..offset_end, data);
+        //copy(data.begin(), data.end(), &rom[offset]);
     }
 }

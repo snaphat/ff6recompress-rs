@@ -10,7 +10,7 @@ fn open(path: &str) -> Result<Vec<u8>, io::Error> {
 }
 
 fn main() {
-    let rom = match open("Final Fantasy III (USA) (Rev 1).sfc") {
+    let mut rom = match open("Final Fantasy III (USA) (Rev 1).sfc") {
         | Ok(bytes) => rom::Rom::new(bytes),
         | Err(e) => {
             println!("{}", e);
@@ -18,7 +18,7 @@ fn main() {
         }
     };
 
-    rom._recompress(0xC4C008);
+    rom.recompress("dd", 0xC4C008);
 
     println!("Hello, world!");
 }
