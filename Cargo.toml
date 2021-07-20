@@ -9,6 +9,7 @@ version = "0.1.0"
 
 [dependencies]
 hex = "0.4.3"
+num-traits = "0.2.14"
 serde_json = "1.0"
 [dependencies.apultra]
 path = "apultra-rs"
