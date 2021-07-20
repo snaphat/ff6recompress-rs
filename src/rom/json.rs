@@ -62,34 +62,34 @@ impl Config
         field: &str,
     ) -> Result<(&str, Range<usize>, Option<(Range<usize>, usize, usize, usize)>), Box<dyn Error>>
     {
-        // Parse outer entries.
+        // Lookup outer json.
         let j_entry = &self.config["assembly"][field];
         let j_table = &j_entry["pointerTable"];
         // Extract maybe entries.
-        let field_name = j_entry["name"].as_str();
-        let field_rnge = j_entry["range"].as_str();
-        // Parse.
+        let field_name = j_entry["name"].as_str();  // Name of compressed data, e.g. 'CinematicProgram'.
+        let field_rnge = j_entry["range"].as_str(); // Range of compressed data in format of '0xYYYYYYYY-0xZZZZZZZZ'.
+        // Check and return entry name and range.
         let field_name = field_name.ok_or(ParseError)?;
         let field_rnge = field_rnge.ok_or(ParseError)?.hex_to_range::<usize>()?;
 
-        // Check if if pointer table exists.
+        // If pointer table exists, then this entry has an array of compressed sub-entries.
         if let Some(_) = j_table.as_str()
         {
             // Extact inner maybe entries.
-            let arr_len1 = j_entry["arrayLength"].as_u64();     // There are two possible arraylength entries.
+            let arr_len1 = j_entry["arrayLength"].as_u64();     // There are two possible array length entries.
             let arr_len2 = j_entry["array"]["length"].as_u64(); // But, only 1 should exist at a time.
             let ptr_size = j_table["pointerLength"].as_u64();   // Pointer sizes can vary from 1 to 3.
             let tbl_offs = j_table["offset"].as_str();          // Table offset in format of '0xYYYYYYYY'.
             let tbl_rnge = j_table["range"].as_str();           // Range in format of '0xYYYYYYYY-0xZZZZZZZZ'.
 
-            // Garray length entry 1 or 2. Get pointer size, table offset, and table range.
-            let arr_len0 = arr_len1.or(arr_len2).or(Some(1)).unwrap() as usize;         // Default: 1.
+            // Check and return array length entry 1 or 2, pointer size, table offset, and table range.
+            let arr_len  = arr_len1.or(arr_len2).or(Some(1)).unwrap() as usize;         // Default: 1.
             let ptr_size = ptr_size.map_or(2 as usize, |x| x as usize);                 // Default: 2.
             let tbl_offs = tbl_offs.map_or(Ok(0 as usize), |x| x.hex_to::<usize>())?;   // Default: 0.
             let tbl_rnge = tbl_rnge.ok_or(ParseError)?.hex_to_range::<usize>()?;        // Default: None (ParseError).
 
-            // Return entry with pointer table.
-            Ok((field_name, field_rnge, Some((tbl_rnge, tbl_offs, ptr_size, arr_len0))))
+            // Return entry with pointer table and array of compressed sub-entries.
+            Ok((field_name, field_rnge, Some((tbl_rnge, tbl_offs, ptr_size, arr_len))))
         }
         else
         {
