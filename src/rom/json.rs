@@ -1,34 +1,43 @@
-use std::error::Error;
+use std::{error::Error, ops::Range};
 
 use super::error::ParseError;
 
-fn to_usize(s: &str) -> Result<usize, Box<dyn Error>>
+trait StringToUsize
 {
-    // Slice 0x from number.
-    let num = s.get(2..).ok_or(ParseError)?;
-
-    // Convert to usize.
-    let num = usize::from_str_radix(num, 16)?;
-    Ok(num)
+    fn as_usize(&self) -> Result<usize, Box<dyn Error>>;
+    fn as_usize_range(&self) -> Result<Range<usize>, Box<dyn Error>>;
 }
 
-fn to_usize_pair(s: &str) -> Result<(usize, usize), Box<dyn Error>>
+impl StringToUsize for str
 {
-    let range = s.split("-").collect::<Vec<&str>>();
-
-    // Check that range consist of only two entries..
-    if range.len() != 2
+    fn as_usize(&self) -> Result<usize, Box<dyn Error>>
     {
-        return Err(Box::new(ParseError));
-    };
-    // Slice 0x from start.
-    let beg = &range[0].get(2..).ok_or(ParseError)?;
-    let end = &range[1].get(2..).ok_or(ParseError)?;
+        // Slice 0x from number.
+        let num = self.get(2..).ok_or(ParseError)?;
 
-    // Convert to usize.
-    let beg = usize::from_str_radix(beg, 16)?;
-    let end = usize::from_str_radix(end, 16)?;
-    Ok((beg, end))
+        // Convert to usize.
+        let num = usize::from_str_radix(num, 16)?;
+        Ok(num)
+    }
+
+    fn as_usize_range(&self) -> Result<Range<usize>, Box<dyn Error>>
+    {
+        let range = self.split("-").collect::<Vec<&str>>();
+
+        // Check that range consist of only two entries..
+        if range.len() != 2
+        {
+            return Err(Box::new(ParseError));
+        };
+        // Slice 0x from start.
+        let beg = &range[0].get(2..).ok_or(ParseError)?;
+        let end = &range[1].get(2..).ok_or(ParseError)?;
+
+        // Convert to usize.
+        let beg = usize::from_str_radix(beg, 16)?;
+        let end = usize::from_str_radix(end, 16)?;
+        Ok(beg..end)
+    }
 }
 
 pub struct Config
@@ -46,7 +55,7 @@ impl Config
     pub fn extract(
         &self,
         field: &str,
-    ) -> Result<(&str, (usize, usize), Option<((usize, usize), usize, usize, usize)>), Box<dyn Error>>
+    ) -> Result<(&str, Range<usize>, Option<(Range<usize>, usize, usize, usize)>), Box<dyn Error>>
     {
         // Parse outer entries.
         let j_entry = &self.config["assembly"][field];
@@ -54,7 +63,7 @@ impl Config
         let field_name = j_entry["name"].as_str();
         let field_rnge = j_entry["range"].as_str();
         let field_name = field_name.ok_or(ParseError)?;
-        let field_rnge = to_usize_pair(field_rnge.ok_or(ParseError)?)?;
+        let field_rnge = field_rnge.ok_or(ParseError)?.as_usize_range()?;
 
         if let Some(_) = j_table.as_str()
         {
@@ -67,8 +76,8 @@ impl Config
             let tbl_plen = j_table["pointerLength"].as_u64();
 
             let arr_len0 = arr_len1.or(arr_len2).or(Some(1)).unwrap() as usize;
-            let tbl_rnge = to_usize_pair(tbl_rnge.ok_or(ParseError)?)?;
-            let tbl_offs = tbl_offs.map_or(Ok(0 as usize), |x| to_usize(x))?;
+            let tbl_rnge = tbl_rnge.ok_or(ParseError)?.as_usize_range()?;
+            let tbl_offs = tbl_offs.map_or(Ok(0 as usize), |x| x.as_usize())?;
             let tbl_plen = tbl_plen.map_or(2 as usize, |x| x as usize);
 
             // Return entry with pointer table.
