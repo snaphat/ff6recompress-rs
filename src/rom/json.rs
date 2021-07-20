@@ -1,7 +1,9 @@
 use std::error::Error;
+
 use super::error::ParseError;
 
-fn to_usize(s: &str) -> Result<usize, Box<dyn Error>> {
+fn to_usize(s: &str) -> Result<usize, Box<dyn Error>>
+{
     // Slice 0x from number.
     let num = s.get(2..).ok_or(ParseError)?;
 
@@ -10,11 +12,13 @@ fn to_usize(s: &str) -> Result<usize, Box<dyn Error>> {
     Ok(num)
 }
 
-fn to_usize_pair(s: &str) -> Result<(usize, usize), Box<dyn Error>> {
+fn to_usize_pair(s: &str) -> Result<(usize, usize), Box<dyn Error>>
+{
     let range = s.split("-").collect::<Vec<&str>>();
 
     // Check that range consist of only two entries..
-    if range.len() != 2 {
+    if range.len() != 2
+    {
         return Err(Box::new(ParseError));
     };
     // Slice 0x from start.
@@ -27,14 +31,18 @@ fn to_usize_pair(s: &str) -> Result<(usize, usize), Box<dyn Error>> {
     Ok((beg, end))
 }
 
-pub struct Config {
+pub struct Config
+{
     config: serde_json::Value,
 }
 
-impl Config {
-    pub fn new() -> Config {
+impl Config
+{
+    pub fn new() -> Config
+    {
         Config { config: serde_json::from_str(CONFIG as &str).unwrap() }
     }
+
     pub fn extract(
         &self,
         field: &str,
@@ -42,22 +50,34 @@ impl Config {
     {
         // Parse outer entries.
         let j_entry = &self.config["assembly"][field];
-        let field_name = &j_entry["name"].as_str().ok_or(ParseError)?;
-        let field_range = to_usize_pair(&j_entry["range"].as_str().ok_or(ParseError)?)?;
-
         let j_table = &j_entry["pointerTable"];
-        if let Some(_) = j_table.as_str() {
+        let field_name = j_entry["name"].as_str();
+        let field_rnge = j_entry["range"].as_str();
+        let field_name = field_name.ok_or(ParseError)?;
+        let field_rnge = to_usize_pair(field_rnge.ok_or(ParseError)?)?;
+
+        if let Some(_) = j_table.as_str()
+        {
             // Parse inner entries.
-            let array_len = j_entry["arrayLength"].as_u64().or(j_entry["array"]["length"].as_u64()).or(Some(1)).unwrap() as usize;
-            let tbl_range = to_usize_pair(&j_table["range"].as_str().ok_or(ParseError)?)?;
-            let tbl_offset = j_table["offset"].as_str().map_or(Ok(0 as usize), |x| to_usize(x))?;
-            let tbl_ptr_len = j_table["pointerLength"].as_u64().map_or(2 as usize, |x| x as usize);
+
+            let arr_len1 = j_entry["arrayLength"].as_u64();
+            let arr_len2 = j_entry["array"]["length"].as_u64();
+            let tbl_rnge = j_table["range"].as_str();
+            let tbl_offs = j_table["offset"].as_str();
+            let tbl_plen = j_table["pointerLength"].as_u64();
+
+            let arr_len0 = arr_len1.or(arr_len2).or(Some(1)).unwrap() as usize;
+            let tbl_rnge = to_usize_pair(tbl_rnge.ok_or(ParseError)?)?;
+            let tbl_offs = tbl_offs.map_or(Ok(0 as usize), |x| to_usize(x))?;
+            let tbl_plen = tbl_plen.map_or(2 as usize, |x| x as usize);
 
             // Return entry with pointer table.
-            Ok((field_name, field_range, Some((tbl_range, tbl_offset, tbl_ptr_len, array_len))))
-        } else {
+            Ok((field_name, field_rnge, Some((tbl_rnge, tbl_offs, tbl_plen, arr_len0))))
+        }
+        else
+        {
             // Return entry without pointer table.
-            Ok((field_name, field_range, None))
+            Ok((field_name, field_rnge, None))
         }
     }
 }
