@@ -56,6 +56,7 @@ impl Config
         Config { config: serde_json::from_str(CONFIG as &str).unwrap() }
     }
 
+    #[rustfmt::skip]
     pub fn extract(
         &self,
         field: &str,
@@ -64,28 +65,31 @@ impl Config
         // Parse outer entries.
         let j_entry = &self.config["assembly"][field];
         let j_table = &j_entry["pointerTable"];
+        // Extract maybe entries.
         let field_name = j_entry["name"].as_str();
         let field_rnge = j_entry["range"].as_str();
+        // Parse.
         let field_name = field_name.ok_or(ParseError)?;
         let field_rnge = field_rnge.ok_or(ParseError)?.hex_to_range::<usize>()?;
 
+        // Check if if pointer table exists.
         if let Some(_) = j_table.as_str()
         {
-            // Parse inner entries.
+            // Extact inner maybe entries.
+            let arr_len1 = j_entry["arrayLength"].as_u64();     // There are two possible arraylength entries.
+            let arr_len2 = j_entry["array"]["length"].as_u64(); // But, only 1 should exist at a time.
+            let ptr_size = j_table["pointerLength"].as_u64();   // Pointer sizes can vary from 1 to 3.
+            let tbl_offs = j_table["offset"].as_str();          // Table offset in format of '0xYYYYYYYY'.
+            let tbl_rnge = j_table["range"].as_str();           // Range in format of '0xYYYYYYYY-0xZZZZZZZZ'.
 
-            let arr_len1 = j_entry["arrayLength"].as_u64();
-            let arr_len2 = j_entry["array"]["length"].as_u64();
-            let tbl_rnge = j_table["range"].as_str();
-            let tbl_offs = j_table["offset"].as_str();
-            let tbl_plen = j_table["pointerLength"].as_u64();
-
-            let arr_len0 = arr_len1.or(arr_len2).or(Some(1)).unwrap() as usize;
-            let tbl_rnge = tbl_rnge.ok_or(ParseError)?.hex_to_range::<usize>()?;
-            let tbl_offs = tbl_offs.map_or(Ok(0 as usize), |x| x.hex_to::<usize>())?;
-            let tbl_plen = tbl_plen.map_or(2 as usize, |x| x as usize);
+            // Garray length entry 1 or 2. Get pointer size, table offset, and table range.
+            let arr_len0 = arr_len1.or(arr_len2).or(Some(1)).unwrap() as usize;         // Default: 1.
+            let ptr_size = ptr_size.map_or(2 as usize, |x| x as usize);                 // Default: 2.
+            let tbl_offs = tbl_offs.map_or(Ok(0 as usize), |x| x.hex_to::<usize>())?;   // Default: 0.
+            let tbl_rnge = tbl_rnge.ok_or(ParseError)?.hex_to_range::<usize>()?;        // Default: None (ParseError).
 
             // Return entry with pointer table.
-            Ok((field_name, field_rnge, Some((tbl_rnge, tbl_offs, tbl_plen, arr_len0))))
+            Ok((field_name, field_rnge, Some((tbl_rnge, tbl_offs, ptr_size, arr_len0))))
         }
         else
         {
