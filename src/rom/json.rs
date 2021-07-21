@@ -68,6 +68,18 @@ impl Config
             Ok(ExtractedData { name, range, table: None })
         }
     }
+
+    pub fn insert(&mut self, field: &str, range: Range<usize>) -> Result<(), Box<dyn Error>>
+    {
+        // Get mutuable JSON Pointer.
+        let j_range = self.config["assembly"][field].pointer_mut("/range").ok_or(ParseError)?;
+        // Convert range into string.
+        let s_range = format!("{:#08X}-{:#08X}", range.start, range.end);
+        // Insert entry into json.
+        *j_range = serde_json::json!(s_range);
+        // Return okay.
+        Ok(())
+    }
 }
 
 static CONFIG: &'static str = r##"{

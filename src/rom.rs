@@ -45,8 +45,9 @@ impl Rom
 
     pub fn recompress(&mut self, json_entry: &str, bank_offset: usize) -> ()
     {
-        let config = json::Config::new();
+        let mut config = json::Config::new();
         config.extract("cinematicProgram").unwrap();
+        config.insert("cinematicProgram", 5..10).unwrap();
         let offset = conv_addr(bank_offset); // FIXME: ?
         let (data, offset_end) = self._recompress(offset).unwrap();
         // json.add_freespace(bank_offset+data.size(), bank_offset+old_size);
