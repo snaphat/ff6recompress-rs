@@ -15,7 +15,7 @@ impl HexStringTo for &str
     where T: num_traits::Num<FromStrRadixErr = std::num::ParseIntError>
     {
         // Slice 0x from number.
-        let num = self.get(2..).ok_or(ParseError)?;
+        let num = self.get(2..).ok_or(ParseError::new(""))?; // FIXME: Parser error.
 
         // Convert to usize.
         let num = T::from_str_radix(num, 16)?;
@@ -30,11 +30,11 @@ impl HexStringTo for &str
         // Check that range consist of only two entries..
         if range.len() != 2
         {
-            return Err(Box::new(ParseError));
+            return Err(Box::new(ParseError::new(""))); // FIXME: PARSE_ERROR
         };
         // Slice 0x from start.
-        let beg = &range[0].get(2..).ok_or(ParseError)?;
-        let end = &range[1].get(2..).ok_or(ParseError)?;
+        let beg = &range[0].get(2..).ok_or(ParseError::new(""))?; // FIXME: PARSE ERROR
+        let end = &range[1].get(2..).ok_or(ParseError::new(""))?; // FIXME: PARSER ERROR
 
         // Convert to usize.
         let beg = T::from_str_radix(beg, 16)?;

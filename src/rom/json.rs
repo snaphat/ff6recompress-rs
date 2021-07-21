@@ -1,7 +1,9 @@
 use std::{error::Error, ops::Range};
 
 use super::{error::ParseError, hex_to::HexStringTo};
+use crate::parse_error;
 
+#[derive(Debug)]
 pub struct ExtractedData
 {
     pub name:  String,
@@ -9,6 +11,7 @@ pub struct ExtractedData
     pub table: Option<PointerTable>,
 }
 
+#[derive(Debug)]
 pub struct PointerTable
 {
     pub range:    Range<usize>,
@@ -24,39 +27,54 @@ pub struct Config
 
 impl Config
 {
-    pub fn new() -> Config
+    const FAIL: &'static str = "failed to find JSON entry";
+
+    pub fn default() -> Config
     {
         Config { config: serde_json::from_str(CONFIG as &str).unwrap() }
     }
 
-    #[rustfmt::skip]
-    pub fn extract(&self, field: &str) -> Result<ExtractedData, Box<dyn Error>>
+    pub fn new<S: AsRef<str>>(input: S) -> Result<Config, serde_json::Error>
     {
+        Ok(Config { config: serde_json::from_str(input.as_ref())? })
+    }
+
+    #[rustfmt::skip]
+    pub fn extract<S: AsRef<str>>(&self, field: S) -> Result<ExtractedData, Box<dyn Error>>
+    {
+        let field = field.as_ref();
+        // Setup error printout in case of failure.
+        let err = parse_error!("{} '/assembly/{}'", Config::FAIL, field);
         // Lookup outer json.
+        self.config["assembly"][field].as_object().ok_or(err)?;
         let j_entry = &self.config["assembly"][field];
         let j_table = &j_entry["pointerTable"];
         // Extract maybe entries.
-        let name  = j_entry["name"].as_str();  // Name of compressed data, e.g. 'CinematicProgram'.
-        let range = j_entry["range"].as_str(); // Range of compressed data in format of '0xYYYYYYYY-0xZZZZZZZZ'.
+        let name = j_entry["name"].as_str();   // Name of compressed data, e.g. 'CinematicProgram'.
+        let range = j_entry["range"].as_str(); // Range of compressed data in format of '0xYYYYYY-0xZZZZZZ'.
+        // Setup error printout in case of failure.
+        let err = |x| parse_error!("{} '/assembly/{}/{}'", Config::FAIL, field, x);
         // Check and return entry name and range.
-        let name  = name.ok_or(ParseError)?.to_string();
-        let range = range.ok_or(ParseError)?.hex_to_range::<usize>()?;
+        let name = name.ok_or(err("name"))?.to_string();
+        let range = range.ok_or(err("range"))?.hex_to_range::<usize>()?;
 
         // If pointer table exists, then this entry has an array of compressed sub-entries.
         if let Some(_) = j_table.as_str()
         {
+            // Setup error printout in case of failure.
+            let err = |x| parse_error!("{} '/assembly/{}/pointerTable/{}'", Config::FAIL, field, x);
             // Extact inner maybe entries.
             let arr_len1 = j_entry["arrayLength"].as_u64();     // There are two possible array length entries.
             let arr_len2 = j_entry["array"]["length"].as_u64(); // But, only 1 should exist at a time.
             let ptr_size = j_table["pointerLength"].as_u64();   // Pointer sizes can vary from 1 to 3.
-            let tbl_offs = j_table["offset"].as_str();          // Table offset in format of '0xYYYYYYYY'.
-            let tbl_rnge = j_table["range"].as_str();           // Range in format of '0xYYYYYYYY-0xZZZZZZZZ'.
+            let tbl_offs = j_table["offset"].as_str();          // Table offset in format of '0xYYYYYY'.
+            let tbl_rnge = j_table["range"].as_str();           // Range in format of '0xYYYYYY-0xZZZZZZ'.
 
             // Check and return array length entry 1 or 2, pointer size, table offset, and table range.
-            let arr_len  = arr_len1.or(arr_len2).or(Some(1)).unwrap() as usize;         // Default: 1.
-            let ptr_size = ptr_size.map_or(2 as usize, |x| x as usize);                 // Default: 2.
-            let tbl_offs = tbl_offs.map_or(Ok(0 as usize), |x| x.hex_to::<usize>())?;   // Default: 0.
-            let tbl_rnge = tbl_rnge.ok_or(ParseError)?.hex_to_range::<usize>()?;        // Default: None (ParseError).
+            let arr_len  = arr_len1.or(arr_len2).or(Some(1)).unwrap() as usize;       // Default: 1.
+            let ptr_size = ptr_size.map_or(2 as usize, |x| x as usize);               // Default: 2.
+            let tbl_offs = tbl_offs.map_or(Ok(0 as usize), |x| x.hex_to::<usize>())?; // Default: 0.
+            let tbl_rnge = tbl_rnge.ok_or(err("range"))?.hex_to_range::<usize>()?;    // Default: None (ParseError).
 
             // Return entry with pointer table and array of compressed sub-entries.
             let table = PointerTable { range: tbl_rnge, offset: tbl_offs, ptr_size, arr_len };
@@ -69,17 +87,91 @@ impl Config
         }
     }
 
-    pub fn insert(&mut self, field: &str, range: Range<usize>) -> Result<(), Box<dyn Error>>
+    pub fn insert<S: AsRef<str>>(
+        &mut self,
+        field: S,
+        range: Range<usize>,
+    ) -> Result<(), Box<dyn Error>>
     {
-        // Get mutuable JSON Pointer.
-        let j_range = self.config["assembly"][field].pointer_mut("/range").ok_or(ParseError)?;
-        // Convert range into string.
+        let field = field.as_ref();
+        // Setup Error.
+        let err = parse_error!("{} '/assembly/{}/range'", Config::FAIL, field);
+        // Get mutuable JSON Pointer, Convert range into string, and insert into JSON Pointer.
+        let j_range = self.config["assembly"][field].pointer_mut("/range").ok_or(err)?;
         let s_range = format!("{:#08X}-{:#08X}", range.start, range.end);
-        // Insert entry into json.
         *j_range = serde_json::json!(s_range);
         // Return okay.
         Ok(())
     }
+}
+
+#[test]
+fn extract_test_simple()
+{
+    let test = r##"{ "assembly": {"CinematicProgram": { "name": "TestName", "range": "0x000000-0xFFFFFF" } } } "##;
+    let config = Config::new(test as &str).unwrap();
+    let extracted = config.extract("CinematicProgram").unwrap();
+    assert_eq!(extracted.name, "TestName");
+    assert_eq!(extracted.range, 0x000000..0xFFFFFF);
+    assert_eq!(extracted.table.is_none(), true);
+}
+
+#[test]
+fn extract_test_fail_field()
+{
+    let test = r##"{ "assembly": {"CinematicProgram": { "name": "TestName", "range": "0x000000-0xFFFFFF" } } } "##;
+    let config = Config::new(test as &str).unwrap();
+    let extracted = config.extract("NotEntry").unwrap_err();
+    assert_eq!(
+        "Error Parsing: failed to find JSON entry '/assembly/NotEntry'",
+        format!("{}", extracted)
+    );
+}
+
+#[test]
+fn extract_test_fail_name()
+{
+    let test = r##"{ "assembly": {"CinematicProgram": { } } } "##;
+    let config = Config::new(test as &str).unwrap();
+    let extracted = config.extract("CinematicProgram").unwrap_err();
+    assert_eq!(
+        "Error Parsing: failed to find JSON entry '/assembly/CinematicProgram/name'",
+        format!("{}", extracted)
+    );
+}
+
+#[test]
+fn extract_test_fail_range()
+{
+    let test = r##"{ "assembly": {"CinematicProgram": { "name": "TestName" } } } "##;
+    let config = Config::new(test as &str).unwrap();
+    let extracted = config.extract("CinematicProgram").unwrap_err();
+    assert_eq!(
+        "Error Parsing: failed to find JSON entry '/assembly/CinematicProgram/range'",
+        format!("{}", extracted)
+    );
+}
+
+#[test]
+fn insert_test()
+{
+    let test = r##"{ "assembly": {"CinematicProgram": { "range": "0x000000-0xFFFFFF" } } } "##;
+    let mut config = Config::new(test as &str).unwrap();
+    config.insert("CinematicProgram", 0xFFFFFF..0x000000).unwrap();
+    let s_config = format!("{}", config.config);
+    assert_eq!(s_config, r##"{"assembly":{"CinematicProgram":{"range":"0xFFFFFF-0x000000"}}}"##);
+}
+
+#[test]
+fn insert_test_fail()
+{
+    let test = r##"{ "assembly": {"CinematicProgram": { "range": "0x000000-0xFFFFFF" } } } "##;
+    let mut config = Config::new(test as &str).unwrap();
+    let ret = config.insert("NotEntry", 0xFFFFFF..0x000000).unwrap_err();
+    assert_eq!(
+        "Error Parsing: failed to find JSON entry '/assembly/NotEntry/range'",
+        format!("{}", ret)
+    );
 }
 
 static CONFIG: &'static str = r##"{
