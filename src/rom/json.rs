@@ -2,6 +2,21 @@ use std::{error::Error, ops::Range};
 
 use super::{error::ParseError, hex_to::HexStringTo};
 
+pub struct ExtractedData
+{
+    pub name:  String,
+    pub range: Range<usize>,
+    pub table: Option<PointerTable>,
+}
+
+pub struct PointerTable
+{
+    pub range:    Range<usize>,
+    pub offset:   usize,
+    pub ptr_size: usize,
+    pub arr_len:  usize,
+}
+
 pub struct Config
 {
     config: serde_json::Value,
@@ -15,20 +30,17 @@ impl Config
     }
 
     #[rustfmt::skip]
-    pub fn extract(
-        &self,
-        field: &str,
-    ) -> Result<(&str, Range<usize>, Option<(Range<usize>, usize, usize, usize)>), Box<dyn Error>>
+    pub fn extract(&self, field: &str) -> Result<ExtractedData, Box<dyn Error>>
     {
         // Lookup outer json.
         let j_entry = &self.config["assembly"][field];
         let j_table = &j_entry["pointerTable"];
         // Extract maybe entries.
-        let field_name = j_entry["name"].as_str();  // Name of compressed data, e.g. 'CinematicProgram'.
-        let field_rnge = j_entry["range"].as_str(); // Range of compressed data in format of '0xYYYYYYYY-0xZZZZZZZZ'.
+        let name  = j_entry["name"].as_str();  // Name of compressed data, e.g. 'CinematicProgram'.
+        let range = j_entry["range"].as_str(); // Range of compressed data in format of '0xYYYYYYYY-0xZZZZZZZZ'.
         // Check and return entry name and range.
-        let field_name = field_name.ok_or(ParseError)?;
-        let field_rnge = field_rnge.ok_or(ParseError)?.hex_to_range::<usize>()?;
+        let name  = name.ok_or(ParseError)?.to_string();
+        let range = range.ok_or(ParseError)?.hex_to_range::<usize>()?;
 
         // If pointer table exists, then this entry has an array of compressed sub-entries.
         if let Some(_) = j_table.as_str()
@@ -47,12 +59,13 @@ impl Config
             let tbl_rnge = tbl_rnge.ok_or(ParseError)?.hex_to_range::<usize>()?;        // Default: None (ParseError).
 
             // Return entry with pointer table and array of compressed sub-entries.
-            Ok((field_name, field_rnge, Some((tbl_rnge, tbl_offs, ptr_size, arr_len))))
+            let table = PointerTable { range: tbl_rnge, offset: tbl_offs, ptr_size, arr_len };
+            Ok(ExtractedData { name, range, table: Some(table) })
         }
         else
         {
             // Return entry without pointer table.
-            Ok((field_name, field_rnge, None))
+            Ok(ExtractedData { name, range, table: None })
         }
     }
 }
