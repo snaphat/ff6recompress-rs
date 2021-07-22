@@ -59,10 +59,11 @@ impl Config
         let range = range.ok_or(err("range"))?.hex_to_range::<usize>()?;
 
         // If pointer table exists, then this entry has an array of compressed sub-entries.
-        if let Some(_) = j_table.as_str()
+        if let Some(_) = j_table.as_object()
         {
             // Setup error printout in case of failure.
-            let err = |x| parse_error!("{} '/assembly/{}/pointerTable/{}'", Config::FAIL, field, x);
+            let err  = |x| parse_error!("{} '/assembly/{}/{}'", Config::FAIL, field, x);
+            let err2 = |x| parse_error!("{} '/assembly/{}/pointerTable/{}'", Config::FAIL, field, x);
             // Extact inner maybe entries.
             let arr_len1 = j_entry["arrayLength"].as_u64();     // There are two possible array length entries.
             let arr_len2 = j_entry["array"]["length"].as_u64(); // But, only 1 should exist at a time.
@@ -71,10 +72,10 @@ impl Config
             let tbl_rnge = j_table["range"].as_str();           // Range in format of '0xYYYYYY-0xZZZZZZ'.
 
             // Check and return array length entry 1 or 2, pointer size, table offset, and table range.
-            let arr_len  = arr_len1.or(arr_len2).or(Some(1)).unwrap() as usize;       // Default: 1.
+            let arr_len  = arr_len1.or(arr_len2).ok_or(err("arrayLength"))? as usize; // Default: None (ParseError).
             let ptr_size = ptr_size.map_or(2 as usize, |x| x as usize);               // Default: 2.
             let tbl_offs = tbl_offs.map_or(Ok(0 as usize), |x| x.hex_to::<usize>())?; // Default: 0.
-            let tbl_rnge = tbl_rnge.ok_or(err("range"))?.hex_to_range::<usize>()?;    // Default: None (ParseError).
+            let tbl_rnge = tbl_rnge.ok_or(err2("range"))?.hex_to_range::<usize>()?;   // Default: None (ParseError).
 
             // Return entry with pointer table and array of compressed sub-entries.
             let table = PointerTable { range: tbl_rnge, offset: tbl_offs, ptr_size, arr_len };
@@ -108,7 +109,15 @@ impl Config
 #[test]
 fn extract_test_simple()
 {
-    let test = r##"{ "assembly": {"CinematicProgram": { "name": "TestName", "range": "0x000000-0xFFFFFF" } } } "##;
+    let test = r##"
+    {
+        "assembly": {
+            "CinematicProgram": {
+                "name": "TestName",
+                "range": "0x000000-0xFFFFFF"
+            }
+        }
+    }"##;
     let config = Config::new(test as &str).unwrap();
     let extracted = config.extract("CinematicProgram").unwrap();
     assert_eq!(extracted.name, "TestName");
@@ -117,9 +126,118 @@ fn extract_test_simple()
 }
 
 #[test]
+fn extract_test_pointer_table1()
+{
+    let test = r##"
+    {
+        "assembly": {
+            "CinematicProgram": {
+                "name": "TestName",
+                "range": "0x444444-0xDDDDDD",
+                "arrayLength": 12,
+                "pointerTable": {
+                    "pointerLength": 5,
+                    "offset": "0x222222",
+                    "range": "0x111111-0x333333"
+                }
+            }
+        }
+    }"##;
+    let config = Config::new(test as &str).unwrap();
+    let extracted = config.extract("CinematicProgram").unwrap();
+    assert_eq!(extracted.name, "TestName");
+    assert_eq!(extracted.range, 0x444444..0xDDDDDD);
+    assert_eq!(extracted.table.is_some(), true);
+    let table = extracted.table.unwrap();
+    assert_eq!(table.arr_len, 12);
+    assert_eq!(table.offset, 0x222222);
+    assert_eq!(table.range, 0x111111..0x333333);
+    assert_eq!(table.ptr_size, 5);
+}
+
+#[test]
+fn extract_test_pointer_table2()
+{
+    let test = r##"
+    {
+        "assembly": {
+            "CinematicProgram": {
+                "name": "SomeName",
+                "range": "0xFDEFDE-0xAEFEDE",
+                "array": { "length": 12 },
+                "pointerTable": {
+                    "range": "0xABCDEF1F-0xFDEFAF2F"
+                }
+            }
+        }
+    }"##;
+    let config = Config::new(test as &str).unwrap();
+    let extracted = config.extract("CinematicProgram").unwrap();
+    assert_eq!(extracted.name, "SomeName");
+    assert_eq!(extracted.range, 0xFDEFDE..0xAEFEDE);
+    assert_eq!(extracted.table.is_some(), true);
+    let table = extracted.table.unwrap();
+    assert_eq!(table.arr_len, 12);
+    assert_eq!(table.offset, 0x0);
+    assert_eq!(table.range, 0xABCDEF1F..0xFDEFAF2F);
+    assert_eq!(table.ptr_size, 2);
+}
+
+#[test]
+fn extract_test_pointer_table_range_error()
+{
+    let test = r##"
+    {
+        "assembly": {
+            "CinematicProgram": {
+                "name": "SomeName",
+                "range": "0xFDEFDE-0xAEFEDE",
+                "array": { "length": 12 },
+                "pointerTable": { }
+            }
+        }
+    }"##;
+    let config = Config::new(test as &str).unwrap();
+    let extracted = config.extract("CinematicProgram").unwrap_err();
+    assert_eq!(
+        "Error Parsing: failed to find JSON entry '/assembly/CinematicProgram/pointerTable/range'",
+        format!("{}", extracted)
+    );
+}
+
+#[test]
+fn extract_test_pointer_table_array_length_error()
+{
+    let test = r##"
+    {
+        "assembly": {
+            "CinematicProgram": {
+                "name": "SomeName",
+                "range": "0xFDEFDE-0xAEFEDE",
+                "pointerTable": { }
+            }
+        }
+    }"##;
+    let config = Config::new(test as &str).unwrap();
+    let extracted = config.extract("CinematicProgram").unwrap_err();
+    assert_eq!(
+        "Error Parsing: failed to find JSON entry '/assembly/CinematicProgram/arrayLength'",
+        format!("{}", extracted)
+    );
+}
+
+#[test]
 fn extract_test_fail_field()
 {
-    let test = r##"{ "assembly": {"CinematicProgram": { "name": "TestName", "range": "0x000000-0xFFFFFF" } } } "##;
+    let test = r##"
+    {
+        "assembly": {
+            "CinematicProgram": {
+                "name": "TestName",
+                "range": "0x000000-0xFFFFFF"
+            }
+        }
+    }"##;
     let config = Config::new(test as &str).unwrap();
     let extracted = config.extract("NotEntry").unwrap_err();
     assert_eq!(
@@ -131,7 +249,12 @@ fn extract_test_fail_field()
 #[test]
 fn extract_test_fail_name()
 {
-    let test = r##"{ "assembly": {"CinematicProgram": { } } } "##;
+    let test = r##"
+    {
+        "assembly": {
+            "CinematicProgram": { }
+        }
+    }"##;
     let config = Config::new(test as &str).unwrap();
     let extracted = config.extract("CinematicProgram").unwrap_err();
     assert_eq!(
@@ -143,7 +266,14 @@ fn extract_test_fail_name()
 #[test]
 fn extract_test_fail_range()
 {
-    let test = r##"{ "assembly": {"CinematicProgram": { "name": "TestName" } } } "##;
+    let test = r##"
+    {
+        "assembly": {
+            "CinematicProgram": {
+                "name": "TestName"
+            }
+        }
+    }"##;
     let config = Config::new(test as &str).unwrap();
     let extracted = config.extract("CinematicProgram").unwrap_err();
     assert_eq!(
@@ -155,7 +285,14 @@ fn extract_test_fail_range()
 #[test]
 fn insert_test()
 {
-    let test = r##"{ "assembly": {"CinematicProgram": { "range": "0x000000-0xFFFFFF" } } } "##;
+    let test = r##"
+    {
+        "assembly": {
+            "CinematicProgram": {
+                "range": "0x000000-0xFFFFFF"
+            }
+        }
+    }"##;
     let mut config = Config::new(test as &str).unwrap();
     config.insert("CinematicProgram", 0xFFFFFF..0x000000).unwrap();
     let s_config = format!("{}", config.config);
@@ -165,7 +302,14 @@ fn insert_test()
 #[test]
 fn insert_test_fail()
 {
-    let test = r##"{ "assembly": {"CinematicProgram": { "range": "0x000000-0xFFFFFF" } } } "##;
+    let test = r##"
+    {
+        "assembly": {
+            "CinematicProgram": {
+                "range": "0x000000-0xFFFFFF"
+            }
+        }
+    }"##;
     let mut config = Config::new(test as &str).unwrap();
     let ret = config.insert("NotEntry", 0xFFFFFF..0x000000).unwrap_err();
     assert_eq!(
