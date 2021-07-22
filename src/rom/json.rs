@@ -300,7 +300,7 @@ fn insert_test()
 }
 
 #[test]
-fn insert_test_fail()
+fn insert_test_error()
 {
     let test = r##"
     {
