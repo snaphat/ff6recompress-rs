@@ -42,3 +42,28 @@ impl HexStringTo for &str
         Ok(beg..end)
     }
 }
+
+#[test]
+fn hex_to_test()
+{
+    assert_eq!(0x0, "0x0".hex_to::<usize>().unwrap());
+    assert_eq!(0x1F331, "0x1F331".hex_to::<usize>().unwrap());
+    assert_eq!(0x0, "0x0".hex_to::<isize>().unwrap());
+    assert_eq!(0x1F331, "0x1F331".hex_to::<isize>().unwrap());
+    assert_eq!(0x0, "0x0".hex_to::<u64>().unwrap());
+    assert_eq!(0x1F331, "0x1F331".hex_to::<u64>().unwrap());
+    assert_eq!(0x0, "0x0".hex_to::<u16>().unwrap());
+    assert_eq!(0x1F1, "0x1F1".hex_to::<u16>().unwrap());
+    assert_eq!(0x0, "0x0".hex_to::<i8>().unwrap());
+    assert_eq!(0x1F, "0x1F".hex_to::<i8>().unwrap());
+}
+
+#[test]
+fn hex_to_range_test()
+{
+    assert_eq!(0x1F331..0xEEBB1, "0x1F331-0xEEBB1".hex_to_range::<usize>().unwrap());
+    assert_eq!(0x1F331..0xEEBB1, "0x1F331-0xEEBB1".hex_to_range::<isize>().unwrap());
+    assert_eq!(0x1F331..0xEEBB1, "0x1F331-0xEEBB1".hex_to_range::<u64>().unwrap());
+    assert_eq!(0x1F33..0xEEBB, "0x1F33-0xEEBB".hex_to_range::<u16>().unwrap());
+    assert_eq!(0x1F..0x7E, "0x1F-0x7E".hex_to_range::<i8>().unwrap());
+}
