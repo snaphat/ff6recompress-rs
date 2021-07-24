@@ -10,6 +10,7 @@ pub fn compress(input: &[u8]) -> Result<Vec<u8>, impl Error>
     apultra::compress(input, window_size, dictionary_size, flags, progress, stats)
 }
 
+#[allow(dead_code)]
 pub fn decompress(input: &[u8]) -> Result<Vec<u8>, impl Error>
 {
     let dictionary_size = 0;

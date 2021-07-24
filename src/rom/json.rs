@@ -1,6 +1,6 @@
-use std::{error::Error, ops::Range};
+use std::ops::Range;
 
-use super::{error::ParseError, hex_to::HexStringTo};
+use super::{error::FF6Error, hex_to::HexStringTo};
 use crate::parse_error;
 
 #[derive(Debug)]
@@ -40,7 +40,7 @@ impl Config
     }
 
     #[rustfmt::skip]
-    pub fn extract<S: AsRef<str>>(&self, field: S) -> Result<ExtractedData, Box<dyn Error>>
+    pub fn extract<S: AsRef<str>>(&self, field: S) -> Result<ExtractedData, FF6Error>
     {
         let field = field.as_ref();
         // Setup error printout in case of failure.
@@ -88,11 +88,8 @@ impl Config
         }
     }
 
-    pub fn insert<S: AsRef<str>>(
-        &mut self,
-        field: S,
-        range: Range<usize>,
-    ) -> Result<(), Box<dyn Error>>
+    #[rustfmt::skip]
+    pub fn insert<S: AsRef<str>>(&mut self, field: S, range: Range<usize>) -> Result<(), FF6Error>
     {
         let field = field.as_ref();
         // Setup Error.
@@ -104,6 +101,13 @@ impl Config
         // Return okay.
         Ok(())
     }
+
+    // pub fn save<S: AsRef<str>>(&self, filename: S) -> Result<(), serde_json::Error>
+    // {
+    //     let a = serde_json::to_string_pretty(&self.config)?;
+    //     println!("{}", a);
+    //     Ok(())
+    // }
 }
 
 #[test]
@@ -200,7 +204,7 @@ fn extract_test_pointer_table_range_error()
     let config = Config::new(test as &str).unwrap();
     let extracted = config.extract("CinematicProgram").unwrap_err();
     assert_eq!(
-        "Error Parsing: failed to find JSON entry '/assembly/CinematicProgram/pointerTable/range'",
+        "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/pointerTable/range'`",
         format!("{}", extracted)
     );
 }
@@ -221,7 +225,7 @@ fn extract_test_pointer_table_array_length_error()
     let config = Config::new(test as &str).unwrap();
     let extracted = config.extract("CinematicProgram").unwrap_err();
     assert_eq!(
-        "Error Parsing: failed to find JSON entry '/assembly/CinematicProgram/arrayLength'",
+        "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/arrayLength'`",
         format!("{}", extracted)
     );
 }
@@ -241,7 +245,7 @@ fn extract_test_fail_field()
     let config = Config::new(test as &str).unwrap();
     let extracted = config.extract("NotEntry").unwrap_err();
     assert_eq!(
-        "Error Parsing: failed to find JSON entry '/assembly/NotEntry'",
+        "Error Parsing: `failed to find JSON entry '/assembly/NotEntry'`",
         format!("{}", extracted)
     );
 }
@@ -258,7 +262,7 @@ fn extract_test_fail_name()
     let config = Config::new(test as &str).unwrap();
     let extracted = config.extract("CinematicProgram").unwrap_err();
     assert_eq!(
-        "Error Parsing: failed to find JSON entry '/assembly/CinematicProgram/name'",
+        "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/name'`",
         format!("{}", extracted)
     );
 }
@@ -277,7 +281,7 @@ fn extract_test_fail_range()
     let config = Config::new(test as &str).unwrap();
     let extracted = config.extract("CinematicProgram").unwrap_err();
     assert_eq!(
-        "Error Parsing: failed to find JSON entry '/assembly/CinematicProgram/range'",
+        "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/range'`",
         format!("{}", extracted)
     );
 }
@@ -313,7 +317,7 @@ fn insert_test_error()
     let mut config = Config::new(test as &str).unwrap();
     let ret = config.insert("NotEntry", 0xFFFFFF..0x000000).unwrap_err();
     assert_eq!(
-        "Error Parsing: failed to find JSON entry '/assembly/NotEntry/range'",
+        "Error Parsing: `failed to find JSON entry '/assembly/NotEntry/range'`",
         format!("{}", ret)
     );
 }

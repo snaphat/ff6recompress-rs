@@ -1,32 +1,53 @@
-use std::{error::Error, fmt};
+use std::num::ParseIntError;
+extern crate thiserror;
+use self::thiserror::Error;
 
 #[macro_export]
 macro_rules! parse_error {
     ($($arg:tt)*) => {
-        ParseError::new(format!($($arg)*))
+        super::error::ParseError(format!($($arg)*))
     }
 }
 
-#[derive(Debug)]
-pub struct ParseError
-{
-    pub message: String,
+macro_rules! error_func {
+    ($arg:tt) => {
+        #[allow(non_snake_case)]
+        pub fn $arg<S: Into<String>>(s: S) -> FF6Error
+        {
+            return FF6Error::$arg(s.into());
+        }
+    };
 }
 
-impl Error for ParseError {}
-
-impl ParseError
-{
-    pub fn new<S: AsRef<str>>(message: S) -> ParseError
-    {
-        ParseError { message: message.as_ref().to_string() }
-    }
+macro_rules! error_func_wrap {
+    ($arg0:tt, $arg1:tt) => {
+        #[allow(non_snake_case)]
+        pub fn $arg0<S: Into<String>>(e: $arg1, s: S) -> FF6Error
+        {
+            return FF6Error::$arg0(e, s.into());
+        }
+    };
 }
 
-impl fmt::Display for ParseError
+#[derive(Error, Debug)]
+pub enum FF6Error
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
-    {
-        write!(f, "Error Parsing: {}", self.message)
-    }
+    // Normal Errors:
+    #[error("Error Parsing: `{0}`")]
+    ParseError(String),
+    #[error("Error Parsing: `invalid hex string '{0}'`")]
+    HexError(String),
+    #[error("Error Parsing: `invalid hex range '{0}'`")]
+    HexRangeError(String),
+    // Wrap Other Errors:
+    #[error("Error Parsing: `{0} '{1}'`")]
+    HexWrapError(ParseIntError, String),
+    #[error("Error Parsing: `{0} '{1}'`")]
+    HexRangeWrapError(ParseIntError, String),
 }
+
+error_func!(ParseError);
+error_func!(HexError);
+error_func!(HexRangeError);
+error_func_wrap!(HexWrapError, ParseIntError);
+error_func_wrap!(HexRangeWrapError, ParseIntError);
