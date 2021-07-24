@@ -1,15 +1,15 @@
 extern crate apultra;
 use std::cell::RefCell;
 
-use self::apultra::DecompressionError;
-use self::apultra::Error;
+use super::error::{DecompressionError, FF6Error};
+//use self::apultra::DecompressionError;
 
-pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize), Error>
+pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize), FF6Error>
 {
     // Check if the input is long enough to contain length bytes.
     if input.len() < 2
     {
-        return Err(DecompressionError());
+        return Err(DecompressionError("LZSS: Input data too short"));
     }
 
     // Get length of compressed data.
@@ -18,22 +18,26 @@ pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize), Error>
     // Check if length valid.
     if length == 0
     {
-        return Err(DecompressionError());
+        return Err(DecompressionError("LZSS: Invalid compression length of 0"));
     }
 
     // Check if length is within bounds if input data.
     if length > input.len()
     {
-        return Err(DecompressionError());
+        return Err(DecompressionError(format!(
+            "LZSS: Buffer length is less than decoded data size ({}<{})",
+            input.len(),
+            length
+        )));
     }
 
     // Get slice of data of the exact length (for OoB handling).
-    let mut src = input[2..length + 2].iter();
+    let mut src = input[2..length].iter();
     let s = RefCell::new(2); // Source index.
 
     // Smart wrapper for iterator. Returns DecompressionError if iterating past the end of the buffer.
-    let mut next = || -> Result<u8, Error> {
-        src.next().ok_or(DecompressionError()).map(|val| {
+    let mut next = || -> Result<u8, FF6Error> {
+        src.next().ok_or(DecompressionError("LZSS: Iterated past end of input buffer")).map(|val| {
             *s.borrow_mut() += 1; // Update source index.
             *val // Return the next value.
         })
@@ -95,4 +99,51 @@ pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize), Error>
     }
 
     Ok((dest, length)) // (decompressed data, original compressed size)
+}
+
+#[test]
+fn test_decompression()
+{
+    let (data, csize) = decompress(&[0x06, 0x00, 0x01, 0x11, 0xDE, 0x37]).unwrap();
+
+    assert_eq!(6, csize);
+    assert_eq!(&[0x11; 10], &data[..]);
+}
+
+#[test]
+fn test_decompression_error_data_too_short()
+{
+    let err = decompress(&[0]).unwrap_err();
+
+    assert_eq!("Decompression Error: `LZSS: Input data too short`", format!("{}", err));
+}
+
+#[test]
+fn test_decompression_error_length_zero()
+{
+    let err = decompress(&[0, 0]).unwrap_err();
+
+    assert_eq!("Decompression Error: `LZSS: Invalid compression length of 0`", format!("{}", err));
+}
+
+#[test]
+fn test_decompression_error_length_less_than_decoded_size()
+{
+    let err = decompress(&[5, 0, 1]).unwrap_err();
+
+    assert_eq!(
+        "Decompression Error: `LZSS: Buffer length is less than decoded data size (3<5)`",
+        format!("{}", err)
+    );
+}
+
+#[test]
+fn test_decompression_error_data_oob()
+{
+    let err = decompress(&[3, 0, 1, 1]).unwrap_err();
+
+    assert_eq!(
+        "Decompression Error: `LZSS: Iterated past end of input buffer`",
+        format!("{}", err)
+    );
 }

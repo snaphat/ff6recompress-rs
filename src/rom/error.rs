@@ -33,6 +33,10 @@ macro_rules! error_func_wrap {
 pub enum FF6Error
 {
     // Normal Errors:
+    #[error("Compression Error: `{0}`")]
+    CompressionError(String),
+    #[error("Decompression Error: `{0}`")]
+    DecompressionError(String),
     #[error("Error Parsing: `{0}`")]
     ParseError(String),
     #[error("Error Parsing: `invalid hex string '{0}'`")]
@@ -46,6 +50,8 @@ pub enum FF6Error
     HexRangeWrapError(ParseIntError, String),
 }
 
+error_func!(CompressionError);
+error_func!(DecompressionError);
 error_func!(ParseError);
 error_func!(HexError);
 error_func!(HexRangeError);
