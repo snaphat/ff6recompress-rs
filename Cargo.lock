@@ -15,6 +15,7 @@ dependencies = [
  "cc",
  "cty",
  "libffi",
+ "thiserror",
 ]
 
 [[package]]

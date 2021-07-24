@@ -2,13 +2,14 @@ extern crate apultra;
 use std::cell::RefCell;
 
 use self::apultra::DecompressionError;
+use self::apultra::Error;
 
-pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize), DecompressionError>
+pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize), Error>
 {
     // Check if the input is long enough to contain length bytes.
     if input.len() < 2
     {
-        return Err(DecompressionError);
+        return Err(DecompressionError());
     }
 
     // Get length of compressed data.
@@ -17,13 +18,13 @@ pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize), DecompressionError>
     // Check if length valid.
     if length == 0
     {
-        return Err(DecompressionError);
+        return Err(DecompressionError());
     }
 
     // Check if length is within bounds if input data.
     if length > input.len()
     {
-        return Err(DecompressionError);
+        return Err(DecompressionError());
     }
 
     // Get slice of data of the exact length (for OoB handling).
@@ -31,8 +32,8 @@ pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize), DecompressionError>
     let s = RefCell::new(2); // Source index.
 
     // Smart wrapper for iterator. Returns DecompressionError if iterating past the end of the buffer.
-    let mut next = || -> Result<u8, DecompressionError> {
-        src.next().ok_or(DecompressionError).map(|val| {
+    let mut next = || -> Result<u8, Error> {
+        src.next().ok_or(DecompressionError()).map(|val| {
             *s.borrow_mut() += 1; // Update source index.
             *val // Return the next value.
         })
