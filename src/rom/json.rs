@@ -111,7 +111,7 @@ impl Config
 }
 
 #[test]
-fn extract_test_simple()
+fn test_extract_simple()
 {
     let test = r##"
     {
@@ -130,7 +130,7 @@ fn extract_test_simple()
 }
 
 #[test]
-fn extract_test_pointer_table1()
+fn test_extract_pointer_table1()
 {
     let test = r##"
     {
@@ -160,7 +160,7 @@ fn extract_test_pointer_table1()
 }
 
 #[test]
-fn extract_test_pointer_table2()
+fn test_extract_pointer_table2()
 {
     let test = r##"
     {
@@ -188,7 +188,7 @@ fn extract_test_pointer_table2()
 }
 
 #[test]
-fn extract_test_pointer_table_range_error()
+fn test_extract_pointer_table_range_error()
 {
     let test = r##"
     {
@@ -210,7 +210,7 @@ fn extract_test_pointer_table_range_error()
 }
 
 #[test]
-fn extract_test_pointer_table_array_length_error()
+fn test_extract_pointer_table_array_length_error()
 {
     let test = r##"
     {
@@ -231,7 +231,7 @@ fn extract_test_pointer_table_array_length_error()
 }
 
 #[test]
-fn extract_test_fail_field()
+fn test_extract_fail_field()
 {
     let test = r##"
     {
@@ -251,7 +251,7 @@ fn extract_test_fail_field()
 }
 
 #[test]
-fn extract_test_fail_name()
+fn test_extract_fail_name()
 {
     let test = r##"
     {
@@ -268,7 +268,7 @@ fn extract_test_fail_name()
 }
 
 #[test]
-fn extract_test_fail_range()
+fn test_extract_fail_range()
 {
     let test = r##"
     {
@@ -287,7 +287,7 @@ fn extract_test_fail_range()
 }
 
 #[test]
-fn insert_test()
+fn test_insert()
 {
     let test = r##"
     {
@@ -304,7 +304,7 @@ fn insert_test()
 }
 
 #[test]
-fn insert_test_error()
+fn test_insert_error()
 {
     let test = r##"
     {
