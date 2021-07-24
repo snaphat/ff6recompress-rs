@@ -100,49 +100,58 @@ pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize), FF6Error>
     Ok((dest, length)) // (decompressed data, original compressed size)
 }
 
-#[test]
-fn test_decompression()
+#[cfg(test)]
+mod test
 {
-    let (data, csize) = decompress(&[0x06, 0x00, 0x01, 0x11, 0xDE, 0x37]).unwrap();
+    use super::decompress;
 
-    assert_eq!(6, csize);
-    assert_eq!(&[0x11; 10], &data[..]);
-}
+    #[test]
+    fn test_decompression()
+    {
+        let (data, csize) = decompress(&[0x06, 0x00, 0x01, 0x11, 0xDE, 0x37]).unwrap();
 
-#[test]
-fn test_decompression_error_data_too_short()
-{
-    let err = decompress(&[0]).unwrap_err();
+        assert_eq!(6, csize);
+        assert_eq!(&[0x11; 10], &data[..]);
+    }
 
-    assert_eq!("Decompression Error: `LZSS: Input data too short`", format!("{}", err));
-}
+    #[test]
+    fn test_decompression_error_data_too_short()
+    {
+        let err = decompress(&[0]).unwrap_err();
 
-#[test]
-fn test_decompression_error_length_zero()
-{
-    let err = decompress(&[0, 0]).unwrap_err();
+        assert_eq!("Decompression Error: `LZSS: Input data too short`", format!("{}", err));
+    }
 
-    assert_eq!("Decompression Error: `LZSS: Invalid compression length of 0`", format!("{}", err));
-}
+    #[test]
+    fn test_decompression_error_length_zero()
+    {
+        let err = decompress(&[0, 0]).unwrap_err();
 
-#[test]
-fn test_decompression_error_length_less_than_decoded_size()
-{
-    let err = decompress(&[5, 0, 1]).unwrap_err();
+        assert_eq!(
+            "Decompression Error: `LZSS: Invalid compression length of 0`",
+            format!("{}", err)
+        );
+    }
 
-    assert_eq!(
-        "Decompression Error: `LZSS: Buffer length is less than decoded data size (3<5)`",
-        format!("{}", err)
-    );
-}
+    #[test]
+    fn test_decompression_error_length_less_than_decoded_size()
+    {
+        let err = decompress(&[5, 0, 1]).unwrap_err();
 
-#[test]
-fn test_decompression_error_data_oob()
-{
-    let err = decompress(&[3, 0, 1, 1]).unwrap_err();
+        assert_eq!(
+            "Decompression Error: `LZSS: Buffer length is less than decoded data size (3<5)`",
+            format!("{}", err)
+        );
+    }
 
-    assert_eq!(
-        "Decompression Error: `LZSS: Iterated past end of input buffer`",
-        format!("{}", err)
-    );
+    #[test]
+    fn test_decompression_error_data_oob()
+    {
+        let err = decompress(&[3, 0, 1, 1]).unwrap_err();
+
+        assert_eq!(
+            "Decompression Error: `LZSS: Iterated past end of input buffer`",
+            format!("{}", err)
+        );
+    }
 }

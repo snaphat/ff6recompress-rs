@@ -110,10 +110,14 @@ impl Config
     // }
 }
 
-#[test]
-fn test_extract_simple()
+#[cfg(test)]
+mod test
 {
-    let test = r##"
+    use super::Config;
+    #[test]
+    fn test_extract_simple()
+    {
+        let test = r##"
     {
         "assembly": {
             "CinematicProgram": {
@@ -122,17 +126,17 @@ fn test_extract_simple()
             }
         }
     }"##;
-    let config = Config::new(test as &str).unwrap();
-    let extracted = config.extract("CinematicProgram").unwrap();
-    assert_eq!(extracted.name, "TestName");
-    assert_eq!(extracted.range, 0x000000..0xFFFFFF);
-    assert_eq!(extracted.table.is_none(), true);
-}
+        let config = Config::new(test as &str).unwrap();
+        let extracted = config.extract("CinematicProgram").unwrap();
+        assert_eq!(extracted.name, "TestName");
+        assert_eq!(extracted.range, 0x000000..0xFFFFFF);
+        assert_eq!(extracted.table.is_none(), true);
+    }
 
-#[test]
-fn test_extract_pointer_table1()
-{
-    let test = r##"
+    #[test]
+    fn test_extract_pointer_table1()
+    {
+        let test = r##"
     {
         "assembly": {
             "CinematicProgram": {
@@ -147,22 +151,22 @@ fn test_extract_pointer_table1()
             }
         }
     }"##;
-    let config = Config::new(test as &str).unwrap();
-    let extracted = config.extract("CinematicProgram").unwrap();
-    assert_eq!(extracted.name, "TestName");
-    assert_eq!(extracted.range, 0x444444..0xDDDDDD);
-    assert_eq!(extracted.table.is_some(), true);
-    let table = extracted.table.unwrap();
-    assert_eq!(table.arr_len, 12);
-    assert_eq!(table.offset, 0x222222);
-    assert_eq!(table.range, 0x111111..0x333333);
-    assert_eq!(table.ptr_size, 5);
-}
+        let config = Config::new(test as &str).unwrap();
+        let extracted = config.extract("CinematicProgram").unwrap();
+        assert_eq!(extracted.name, "TestName");
+        assert_eq!(extracted.range, 0x444444..0xDDDDDD);
+        assert_eq!(extracted.table.is_some(), true);
+        let table = extracted.table.unwrap();
+        assert_eq!(table.arr_len, 12);
+        assert_eq!(table.offset, 0x222222);
+        assert_eq!(table.range, 0x111111..0x333333);
+        assert_eq!(table.ptr_size, 5);
+    }
 
-#[test]
-fn test_extract_pointer_table2()
-{
-    let test = r##"
+    #[test]
+    fn test_extract_pointer_table2()
+    {
+        let test = r##"
     {
         "assembly": {
             "CinematicProgram": {
@@ -175,22 +179,22 @@ fn test_extract_pointer_table2()
             }
         }
     }"##;
-    let config = Config::new(test as &str).unwrap();
-    let extracted = config.extract("CinematicProgram").unwrap();
-    assert_eq!(extracted.name, "SomeName");
-    assert_eq!(extracted.range, 0xFDEFDE..0xAEFEDE);
-    assert_eq!(extracted.table.is_some(), true);
-    let table = extracted.table.unwrap();
-    assert_eq!(table.arr_len, 12);
-    assert_eq!(table.offset, 0x0);
-    assert_eq!(table.range, 0xABCDEF1F..0xFDEFAF2F);
-    assert_eq!(table.ptr_size, 2);
-}
+        let config = Config::new(test as &str).unwrap();
+        let extracted = config.extract("CinematicProgram").unwrap();
+        assert_eq!(extracted.name, "SomeName");
+        assert_eq!(extracted.range, 0xFDEFDE..0xAEFEDE);
+        assert_eq!(extracted.table.is_some(), true);
+        let table = extracted.table.unwrap();
+        assert_eq!(table.arr_len, 12);
+        assert_eq!(table.offset, 0x0);
+        assert_eq!(table.range, 0xABCDEF1F..0xFDEFAF2F);
+        assert_eq!(table.ptr_size, 2);
+    }
 
-#[test]
-fn test_extract_pointer_table_range_error()
-{
-    let test = r##"
+    #[test]
+    fn test_extract_pointer_table_range_error()
+    {
+        let test = r##"
     {
         "assembly": {
             "CinematicProgram": {
@@ -201,18 +205,18 @@ fn test_extract_pointer_table_range_error()
             }
         }
     }"##;
-    let config = Config::new(test as &str).unwrap();
-    let extracted = config.extract("CinematicProgram").unwrap_err();
-    assert_eq!(
-        "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/pointerTable/range'`",
-        format!("{}", extracted)
-    );
-}
+        let config = Config::new(test as &str).unwrap();
+        let extracted = config.extract("CinematicProgram").unwrap_err();
+        assert_eq!(
+            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/pointerTable/range'`",
+            format!("{}", extracted)
+        );
+    }
 
-#[test]
-fn test_extract_pointer_table_array_length_error()
-{
-    let test = r##"
+    #[test]
+    fn test_extract_pointer_table_array_length_error()
+    {
+        let test = r##"
     {
         "assembly": {
             "CinematicProgram": {
@@ -222,18 +226,18 @@ fn test_extract_pointer_table_array_length_error()
             }
         }
     }"##;
-    let config = Config::new(test as &str).unwrap();
-    let extracted = config.extract("CinematicProgram").unwrap_err();
-    assert_eq!(
-        "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/arrayLength'`",
-        format!("{}", extracted)
-    );
-}
+        let config = Config::new(test as &str).unwrap();
+        let extracted = config.extract("CinematicProgram").unwrap_err();
+        assert_eq!(
+            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/arrayLength'`",
+            format!("{}", extracted)
+        );
+    }
 
-#[test]
-fn test_extract_fail_field()
-{
-    let test = r##"
+    #[test]
+    fn test_extract_fail_field()
+    {
+        let test = r##"
     {
         "assembly": {
             "CinematicProgram": {
@@ -242,35 +246,35 @@ fn test_extract_fail_field()
             }
         }
     }"##;
-    let config = Config::new(test as &str).unwrap();
-    let extracted = config.extract("NotEntry").unwrap_err();
-    assert_eq!(
-        "Error Parsing: `failed to find JSON entry '/assembly/NotEntry'`",
-        format!("{}", extracted)
-    );
-}
+        let config = Config::new(test as &str).unwrap();
+        let extracted = config.extract("NotEntry").unwrap_err();
+        assert_eq!(
+            "Error Parsing: `failed to find JSON entry '/assembly/NotEntry'`",
+            format!("{}", extracted)
+        );
+    }
 
-#[test]
-fn test_extract_fail_name()
-{
-    let test = r##"
+    #[test]
+    fn test_extract_fail_name()
+    {
+        let test = r##"
     {
         "assembly": {
             "CinematicProgram": { }
         }
     }"##;
-    let config = Config::new(test as &str).unwrap();
-    let extracted = config.extract("CinematicProgram").unwrap_err();
-    assert_eq!(
-        "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/name'`",
-        format!("{}", extracted)
-    );
-}
+        let config = Config::new(test as &str).unwrap();
+        let extracted = config.extract("CinematicProgram").unwrap_err();
+        assert_eq!(
+            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/name'`",
+            format!("{}", extracted)
+        );
+    }
 
-#[test]
-fn test_extract_fail_range()
-{
-    let test = r##"
+    #[test]
+    fn test_extract_fail_range()
+    {
+        let test = r##"
     {
         "assembly": {
             "CinematicProgram": {
@@ -278,18 +282,18 @@ fn test_extract_fail_range()
             }
         }
     }"##;
-    let config = Config::new(test as &str).unwrap();
-    let extracted = config.extract("CinematicProgram").unwrap_err();
-    assert_eq!(
-        "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/range'`",
-        format!("{}", extracted)
-    );
-}
+        let config = Config::new(test as &str).unwrap();
+        let extracted = config.extract("CinematicProgram").unwrap_err();
+        assert_eq!(
+            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/range'`",
+            format!("{}", extracted)
+        );
+    }
 
-#[test]
-fn test_insert()
-{
-    let test = r##"
+    #[test]
+    fn test_insert()
+    {
+        let test = r##"
     {
         "assembly": {
             "CinematicProgram": {
@@ -297,16 +301,19 @@ fn test_insert()
             }
         }
     }"##;
-    let mut config = Config::new(test as &str).unwrap();
-    config.insert("CinematicProgram", 0xFFFFFF..0x000000).unwrap();
-    let s_config = format!("{}", config.config);
-    assert_eq!(s_config, r##"{"assembly":{"CinematicProgram":{"range":"0xFFFFFF-0x000000"}}}"##);
-}
+        let mut config = Config::new(test as &str).unwrap();
+        config.insert("CinematicProgram", 0xFFFFFF..0x000000).unwrap();
+        let s_config = format!("{}", config.config);
+        assert_eq!(
+            s_config,
+            r##"{"assembly":{"CinematicProgram":{"range":"0xFFFFFF-0x000000"}}}"##
+        );
+    }
 
-#[test]
-fn test_insert_error()
-{
-    let test = r##"
+    #[test]
+    fn test_insert_error()
+    {
+        let test = r##"
     {
         "assembly": {
             "CinematicProgram": {
@@ -314,12 +321,13 @@ fn test_insert_error()
             }
         }
     }"##;
-    let mut config = Config::new(test as &str).unwrap();
-    let ret = config.insert("NotEntry", 0xFFFFFF..0x000000).unwrap_err();
-    assert_eq!(
-        "Error Parsing: `failed to find JSON entry '/assembly/NotEntry/range'`",
-        format!("{}", ret)
-    );
+        let mut config = Config::new(test as &str).unwrap();
+        let ret = config.insert("NotEntry", 0xFFFFFF..0x000000).unwrap_err();
+        assert_eq!(
+            "Error Parsing: `failed to find JSON entry '/assembly/NotEntry/range'`",
+            format!("{}", ret)
+        );
+    }
 }
 
 static CONFIG: &'static str = r##"{
