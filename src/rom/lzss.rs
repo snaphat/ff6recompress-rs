@@ -106,7 +106,7 @@ mod test
     use super::decompress;
 
     #[test]
-    fn test_decompression()
+    fn decompression()
     {
         let (data, csize) = decompress(&[0x06, 0x00, 0x01, 0x11, 0xDE, 0x37]).unwrap();
 
@@ -115,7 +115,7 @@ mod test
     }
 
     #[test]
-    fn test_decompression_error_data_too_short()
+    fn decompression_error_data_too_short()
     {
         let err = decompress(&[0]).unwrap_err();
 
@@ -123,7 +123,7 @@ mod test
     }
 
     #[test]
-    fn test_decompression_error_length_zero()
+    fn decompression_error_length_zero()
     {
         let err = decompress(&[0, 0]).unwrap_err();
 
@@ -134,7 +134,7 @@ mod test
     }
 
     #[test]
-    fn test_decompression_error_length_less_than_decoded_size()
+    fn decompression_error_length_less_than_decoded_size()
     {
         let err = decompress(&[5, 0, 1]).unwrap_err();
 
@@ -145,7 +145,7 @@ mod test
     }
 
     #[test]
-    fn test_decompression_error_data_oob()
+    fn decompression_error_data_oob()
     {
         let err = decompress(&[3, 0, 1, 1]).unwrap_err();
 

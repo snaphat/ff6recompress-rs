@@ -115,7 +115,7 @@ mod test
 {
     use super::Config;
     #[test]
-    fn test_extract_simple()
+    fn extract_simple()
     {
         let test = r##"
     {
@@ -134,7 +134,7 @@ mod test
     }
 
     #[test]
-    fn test_extract_pointer_table1()
+    fn extract_pointer_table1()
     {
         let test = r##"
     {
@@ -164,7 +164,7 @@ mod test
     }
 
     #[test]
-    fn test_extract_pointer_table2()
+    fn extract_pointer_table2()
     {
         let test = r##"
     {
@@ -192,7 +192,7 @@ mod test
     }
 
     #[test]
-    fn test_extract_pointer_table_range_error()
+    fn extract_pointer_table_range_error()
     {
         let test = r##"
     {
@@ -214,7 +214,7 @@ mod test
     }
 
     #[test]
-    fn test_extract_pointer_table_array_length_error()
+    fn extract_pointer_table_array_length_error()
     {
         let test = r##"
     {
@@ -235,7 +235,7 @@ mod test
     }
 
     #[test]
-    fn test_extract_fail_field()
+    fn extract_fail_field()
     {
         let test = r##"
     {
@@ -255,7 +255,7 @@ mod test
     }
 
     #[test]
-    fn test_extract_fail_name()
+    fn extract_fail_name()
     {
         let test = r##"
     {
@@ -272,7 +272,7 @@ mod test
     }
 
     #[test]
-    fn test_extract_fail_range()
+    fn extract_fail_range()
     {
         let test = r##"
     {
@@ -291,7 +291,7 @@ mod test
     }
 
     #[test]
-    fn test_insert()
+    fn insert()
     {
         let test = r##"
     {
@@ -311,7 +311,7 @@ mod test
     }
 
     #[test]
-    fn test_insert_error()
+    fn insert_error()
     {
         let test = r##"
     {
