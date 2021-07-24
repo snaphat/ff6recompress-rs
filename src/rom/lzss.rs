@@ -2,7 +2,6 @@ extern crate apultra;
 use std::cell::RefCell;
 
 use super::error::{DecompressionError, FF6Error};
-//use self::apultra::DecompressionError;
 
 pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize), FF6Error>
 {
