@@ -1,6 +1,7 @@
 use std::num::ParseIntError;
 extern crate thiserror;
 use self::thiserror::Error;
+extern crate paste;
 
 #[macro_export]
 macro_rules! parse_error {
@@ -16,6 +17,16 @@ macro_rules! error_func {
         {
             return FF6Error::$arg(s.into());
         }
+
+        paste::item! {
+            #[test]
+            #[allow(non_snake_case)]
+            fn [<test_ $arg>]() {
+                let a = FF6Error::$arg("".into());
+                let b = $arg("");
+                assert_eq!(a.to_string(), b.to_string());
+            }
+        }
     };
 }
 
@@ -25,6 +36,18 @@ macro_rules! error_func_wrap {
         pub fn $arg0<S: Into<String>>(e: $arg1, s: S) -> FF6Error
         {
             return FF6Error::$arg0(e, s.into());
+        }
+
+        paste::item! {
+            #[test]
+            #[allow(non_snake_case)]
+            fn [<test_ $arg0>]() {
+                // Undefined behavior: Oh well...
+                let e = i32::from_str_radix("a12", 10).unwrap_err();
+                let a = FF6Error::$arg0(e.clone(), "".into());
+                let b = $arg0(e, "");
+                assert_eq!(a.to_string(), b.to_string());
+            }
         }
     };
 }
