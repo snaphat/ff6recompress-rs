@@ -12,6 +12,19 @@ macro_rules! parse_error {
 #[derive(Error, Debug)]
 pub enum FF6Error
 {
+    // From Errors:
+    #[error("Error Parsing JSON: `{source}`")]
+    JsonError
+    {
+        #[from]
+        source: serde_json::Error,
+    },
+    #[error("Error Opening File: `{source}`")]
+    FileError
+    {
+        #[from]
+        source: std::io::Error,
+    },
     // Normal Errors:
     #[error("Compression Error: `{0}`")]
     CompressionError(String),
@@ -28,8 +41,6 @@ pub enum FF6Error
     HexWrapError(ParseIntError, String),
     #[error("Error Parsing: `{0} '{1}'`")]
     HexRangeWrapError(ParseIntError, String),
-    #[error("Error Parsing JSON: `{0}`")]
-    JsonError(serde_json::Error),
 }
 
 #[allow(non_snake_case)]
@@ -71,10 +82,4 @@ pub fn HexWrapError<S: Into<String>>(e: ParseIntError, s: S) -> FF6Error
 pub fn HexRangeWrapError<S: Into<String>>(e: ParseIntError, s: S) -> FF6Error
 {
     FF6Error::HexRangeWrapError(e, s.into())
-}
-
-#[allow(non_snake_case)]
-pub fn JsonError(e: serde_json::Error) -> FF6Error
-{
-    FF6Error::JsonError(e)
 }

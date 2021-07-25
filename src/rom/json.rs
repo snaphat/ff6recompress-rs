@@ -1,9 +1,6 @@
 use std::ops::Range;
 
-use super::{
-    error::{FF6Error, JsonError},
-    hex_to::HexStringTo,
-};
+use super::{error::FF6Error, hex_to::HexStringTo};
 use crate::parse_error;
 
 #[derive(Debug)]
@@ -40,7 +37,7 @@ impl Config
 
     pub fn new<S: AsRef<str>>(input: S) -> Result<Config, FF6Error>
     {
-        Ok(Config { config: serde_json::from_str(input.as_ref()).map_err(|x| JsonError(x))? })
+        Ok(Config { config: serde_json::from_str(input.as_ref())? })
     }
 
     #[rustfmt::skip]
@@ -106,12 +103,12 @@ impl Config
         Ok(())
     }
 
-    // pub fn save<S: AsRef<str>>(&self, filename: S) -> Result<(), FF6Error>
-    // {
-    //     let a = serde_json::to_string_pretty(&self.config)?;
-    //     println!("{}", a);
-    //     Ok(())
-    // }
+    pub fn save<S: AsRef<str>>(&self, filename: S) -> Result<(), FF6Error>
+    {
+        let a = serde_json::to_string_pretty(&self.config)?;
+        let file = std::fs::File::open(filename.as_ref().to_string() + ".json")?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -119,10 +116,18 @@ mod test
 {
     use super::Config;
 
+    // #[test]
+    // fn test()
+    // {
+    //     let config = Config::default();
+    //     config.save("dd");
+    //     panic!("dd");
+    // }
+
     #[test]
     fn config_default()
     {
-        let config = Config::default();
+        let _config = Config::default();
     }
 
     #[test]
