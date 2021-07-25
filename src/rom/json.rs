@@ -1,6 +1,9 @@
 use std::ops::Range;
 
-use super::{error::FF6Error, hex_to::HexStringTo};
+use super::{
+    error::{FF6Error, JsonError},
+    hex_to::HexStringTo,
+};
 use crate::parse_error;
 
 #[derive(Debug)]
@@ -20,6 +23,7 @@ pub struct PointerTable
     pub arr_len:  usize,
 }
 
+#[derive(Debug)]
 pub struct Config
 {
     config: serde_json::Value,
@@ -34,9 +38,9 @@ impl Config
         Config { config: serde_json::from_str(CONFIG as &str).unwrap() }
     }
 
-    pub fn new<S: AsRef<str>>(input: S) -> Result<Config, serde_json::Error>
+    pub fn new<S: AsRef<str>>(input: S) -> Result<Config, FF6Error>
     {
-        Ok(Config { config: serde_json::from_str(input.as_ref())? })
+        Ok(Config { config: serde_json::from_str(input.as_ref()).map_err(|x| JsonError(x))? })
     }
 
     #[rustfmt::skip]
@@ -102,7 +106,7 @@ impl Config
         Ok(())
     }
 
-    // pub fn save<S: AsRef<str>>(&self, filename: S) -> Result<(), serde_json::Error>
+    // pub fn save<S: AsRef<str>>(&self, filename: S) -> Result<(), FF6Error>
     // {
     //     let a = serde_json::to_string_pretty(&self.config)?;
     //     println!("{}", a);
@@ -114,6 +118,18 @@ impl Config
 mod test
 {
     use super::Config;
+
+    #[test]
+    fn config_new_error()
+    {
+        let test = "{";
+        let config = Config::new(test as &str).unwrap_err();
+        assert_eq!(
+            "Error Parsing JSON: `EOF while parsing an object at line 1 column 1`",
+            format!("{}", config)
+        );
+    }
+
     #[test]
     fn extract_simple()
     {
