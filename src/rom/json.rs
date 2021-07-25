@@ -120,6 +120,12 @@ mod test
     use super::Config;
 
     #[test]
+    fn config_default()
+    {
+        let config = Config::default();
+    }
+
+    #[test]
     fn config_new_error()
     {
         let test = "{";
