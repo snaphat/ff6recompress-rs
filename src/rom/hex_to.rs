@@ -76,8 +76,11 @@ impl HexStringTo for &str
 
         let range = self.split("-").collect::<Vec<&str>>();
 
-        // Check that range consist of only two entries prefixed with 0x.
-        if range.len() != 2 || !range[0].starts_with("0x") || !range[1].starts_with("0x")
+        // Check that range consist of only two entries prefixed with 0x + >2 in length.
+        #[rustfmt::skip]
+        if range.len() != 2
+            || !range[0].starts_with("0x") || !range[1].starts_with("0x")
+            ||  range[0].len() < 3          || range[1].len() < 3
         {
             return Err(HexRangeError(self));
         };
@@ -85,12 +88,6 @@ impl HexStringTo for &str
         // Remove 0x.
         let beg = range[0].trim_start_matches("0x");
         let end = range[1].trim_start_matches("0x");
-
-        // Check that range isn't partially empty.
-        if beg.len() == 0 || end.len() == 0
-        {
-            return Err(HexRangeError(self));
-        };
 
         // Convert to usize.
         let beg = T::from_str_radix(beg, 16).map_parse_err(beg, self, true)?;
