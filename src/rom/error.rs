@@ -9,6 +9,25 @@ macro_rules! parse_error {
     }
 }
 
+macro_rules! one_param_fn {
+    ($($arg:tt),*) => {
+
+        $(  #[allow(non_snake_case)]
+            pub fn $arg<S: Into<String>>(s: S) -> FF6Error {
+            FF6Error::$arg(s.into()) }
+        )*
+    }
+}
+macro_rules! two_param_fn {
+    ($($arg:tt),*) => {
+
+        $(  #[allow(non_snake_case)]
+            pub fn $arg<S: Into<String>>(n: S, s: S) -> FF6Error {
+            FF6Error::$arg(n.into(), s.into())
+        } )*
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum FF6Error
 {
@@ -45,43 +64,5 @@ pub enum FF6Error
     HexZeroError(String, String),
 }
 
-#[allow(non_snake_case)]
-pub fn CompressionError<S: Into<String>>(s: S) -> FF6Error
-{
-    FF6Error::CompressionError(s.into())
-}
-#[allow(non_snake_case)]
-pub fn DecompressionError<S: Into<String>>(s: S) -> FF6Error
-{
-    FF6Error::DecompressionError(s.into())
-}
-
-#[allow(non_snake_case)]
-pub fn ParseError<S: Into<String>>(s: S) -> FF6Error
-{
-    FF6Error::ParseError(s.into())
-}
-
-#[allow(non_snake_case)]
-pub fn HexError<S: Into<String>>(s: S) -> FF6Error
-{
-    FF6Error::HexError(s.into())
-}
-
-#[allow(non_snake_case)]
-pub fn HexPosOverflowError<S: Into<String>>(n: S, s: S) -> FF6Error
-{
-    FF6Error::HexPosOverflowError(n.into(), s.into())
-}
-
-#[allow(non_snake_case)]
-pub fn HexNegOverflowError<S: Into<String>>(n: S, s: S) -> FF6Error
-{
-    FF6Error::HexNegOverflowError(n.into(), s.into())
-}
-
-#[allow(non_snake_case)]
-pub fn HexZeroError<S: Into<String>>(n: S, s: S) -> FF6Error
-{
-    FF6Error::HexZeroError(n.into(), s.into())
-}
+one_param_fn!(CompressionError, DecompressionError, ParseError, HexError);
+two_param_fn!(HexPosOverflowError, HexNegOverflowError, HexZeroError);
