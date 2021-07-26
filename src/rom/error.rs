@@ -9,6 +9,16 @@ macro_rules! parse_error {
     }
 }
 
+macro_rules! nil_param_fn {
+    ($($arg:tt),*) => {
+
+        $(  #[allow(non_snake_case)]
+            pub fn $arg() -> FF6Error {
+            FF6Error::$arg() }
+        )*
+    }
+}
+
 macro_rules! one_param_fn {
     ($($arg:tt),*) => {
 
@@ -52,6 +62,8 @@ pub enum FF6Error
     DecompressionError(String),
     #[error("Error Parsing: `{0}`")]
     ParseError(String),
+    #[error("Error Parsing: empty hex string")]
+    HexEmptyError(),
     #[error("Error Parsing: invalid hex string `{0}`")]
     HexError(String),
     #[error("Error Parsing: invalid hex string range `{0}`")]
@@ -66,6 +78,6 @@ pub enum FF6Error
     )]
     HexZeroError(String, String),
 }
-
+nil_param_fn!(HexEmptyError);
 one_param_fn!(CompressionError, DecompressionError, ParseError, HexError, HexRangeError);
 two_param_fn!(HexPosOverflowError, HexNegOverflowError, HexZeroError);
