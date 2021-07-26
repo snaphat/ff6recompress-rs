@@ -18,6 +18,7 @@ macro_rules! one_param_fn {
         )*
     }
 }
+
 macro_rules! two_param_fn {
     ($($arg:tt),*) => {
 
@@ -53,6 +54,8 @@ pub enum FF6Error
     ParseError(String),
     #[error("Error Parsing: invalid hex string `{0}`")]
     HexError(String),
+    #[error("Error Parsing: invalid hex string range `{0}`")]
+    HexRangeError(String),
     // Wrap Other Errors:
     #[error("Error Parsing: number `0x{0}` too large to fit in target type for hex string `{1}`")]
     HexPosOverflowError(String, String),
@@ -64,5 +67,5 @@ pub enum FF6Error
     HexZeroError(String, String),
 }
 
-one_param_fn!(CompressionError, DecompressionError, ParseError, HexError);
+one_param_fn!(CompressionError, DecompressionError, ParseError, HexError, HexRangeError);
 two_param_fn!(HexPosOverflowError, HexNegOverflowError, HexZeroError);
