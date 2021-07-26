@@ -134,10 +134,10 @@ mod test
     fn config_new_error()
     {
         let test = "{";
-        let config = Config::new(test as &str).unwrap_err();
+        let err = Config::new(test as &str).unwrap_err();
         assert_eq!(
-            "Error Parsing JSON: `EOF while parsing an object at line 1 column 1`",
-            format!("{}", config)
+            err.to_string(),
+            "Error Parsing JSON: `EOF while parsing an object at line 1 column 1`"
         );
     }
 
@@ -233,10 +233,10 @@ mod test
         }
     }"##;
         let config = Config::new(test as &str).unwrap();
-        let extracted = config.extract("CinematicProgram").unwrap_err();
+        let err = config.extract("CinematicProgram").unwrap_err();
         assert_eq!(
-            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/pointerTable/range'`",
-            format!("{}", extracted)
+            err.to_string(),
+            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/pointerTable/range'`"
         );
     }
 
@@ -254,10 +254,10 @@ mod test
         }
     }"##;
         let config = Config::new(test as &str).unwrap();
-        let extracted = config.extract("CinematicProgram").unwrap_err();
+        let err = config.extract("CinematicProgram").unwrap_err();
         assert_eq!(
-            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/arrayLength'`",
-            format!("{}", extracted)
+            err.to_string(),
+            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/arrayLength'`"
         );
     }
 
@@ -274,10 +274,10 @@ mod test
         }
     }"##;
         let config = Config::new(test as &str).unwrap();
-        let extracted = config.extract("NotEntry").unwrap_err();
+        let err = config.extract("NotEntry").unwrap_err();
         assert_eq!(
-            "Error Parsing: `failed to find JSON entry '/assembly/NotEntry'`",
-            format!("{}", extracted)
+            err.to_string(),
+            "Error Parsing: `failed to find JSON entry '/assembly/NotEntry'`"
         );
     }
 
@@ -291,10 +291,10 @@ mod test
         }
     }"##;
         let config = Config::new(test as &str).unwrap();
-        let extracted = config.extract("CinematicProgram").unwrap_err();
+        let err = config.extract("CinematicProgram").unwrap_err();
         assert_eq!(
-            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/name'`",
-            format!("{}", extracted)
+            err.to_string(),
+            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/name'`"
         );
     }
 
@@ -310,10 +310,10 @@ mod test
         }
     }"##;
         let config = Config::new(test as &str).unwrap();
-        let extracted = config.extract("CinematicProgram").unwrap_err();
+        let err = config.extract("CinematicProgram").unwrap_err();
         assert_eq!(
-            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/range'`",
-            format!("{}", extracted)
+            err.to_string(),
+            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/range'`"
         );
     }
 
@@ -330,11 +330,8 @@ mod test
     }"##;
         let mut config = Config::new(test as &str).unwrap();
         config.insert("CinematicProgram", 0xFFFFFF..0x000000).unwrap();
-        let s_config = format!("{}", config.config);
-        assert_eq!(
-            s_config,
-            r##"{"assembly":{"CinematicProgram":{"range":"0xFFFFFF-0x000000"}}}"##
-        );
+        let config = format!("{}", config.config);
+        assert_eq!(config, r##"{"assembly":{"CinematicProgram":{"range":"0xFFFFFF-0x000000"}}}"##);
     }
 
     #[test]
@@ -349,10 +346,10 @@ mod test
         }
     }"##;
         let mut config = Config::new(test as &str).unwrap();
-        let ret = config.insert("NotEntry", 0xFFFFFF..0x000000).unwrap_err();
+        let err = config.insert("NotEntry", 0xFFFFFF..0x000000).unwrap_err();
         assert_eq!(
-            "Error Parsing: `failed to find JSON entry '/assembly/NotEntry/range'`",
-            format!("{}", ret)
+            err.to_string(),
+            "Error Parsing: `failed to find JSON entry '/assembly/NotEntry/range'`"
         );
     }
 }

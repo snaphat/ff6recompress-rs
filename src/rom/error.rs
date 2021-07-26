@@ -32,15 +32,17 @@ pub enum FF6Error
     DecompressionError(String),
     #[error("Error Parsing: `{0}`")]
     ParseError(String),
-    #[error("Error Parsing: `invalid hex string '{0}'`")]
+    #[error("Error Parsing: invalid hex string `{0}`")]
     HexError(String),
-    #[error("Error Parsing: `invalid hex range '{0}'`")]
-    HexRangeError(String),
     // Wrap Other Errors:
-    #[error("Error Parsing: `{0} '{1}'`")]
-    HexWrapError(ParseIntError, String),
-    #[error("Error Parsing: `{0} '{1}'`")]
-    HexRangeWrapError(ParseIntError, String),
+    #[error("Error Parsing: number `0x{0}` too large to fit in target type for hex string `{1}`")]
+    HexPosOverflowError(String, String),
+    #[error("Error Parsing: number `0x{0}` too small to fit in target type for hex string `{1}`")]
+    HexNegOverflowError(String, String),
+    #[error(
+        "Error Parsing: number `0x{0}` number would be zero for non-zero type for hex string `{1}`"
+    )]
+    HexZeroError(String, String),
 }
 
 #[allow(non_snake_case)]
@@ -67,19 +69,19 @@ pub fn HexError<S: Into<String>>(s: S) -> FF6Error
 }
 
 #[allow(non_snake_case)]
-pub fn HexRangeError<S: Into<String>>(s: S) -> FF6Error
+pub fn HexPosOverflowError<S: Into<String>>(n: S, s: S) -> FF6Error
 {
-    FF6Error::HexRangeError(s.into())
+    FF6Error::HexPosOverflowError(n.into(), s.into())
 }
 
 #[allow(non_snake_case)]
-pub fn HexWrapError<S: Into<String>>(e: ParseIntError, s: S) -> FF6Error
+pub fn HexNegOverflowError<S: Into<String>>(n: S, s: S) -> FF6Error
 {
-    FF6Error::HexWrapError(e, s.into())
+    FF6Error::HexNegOverflowError(n.into(), s.into())
 }
 
 #[allow(non_snake_case)]
-pub fn HexRangeWrapError<S: Into<String>>(e: ParseIntError, s: S) -> FF6Error
+pub fn HexZeroError<S: Into<String>>(n: S, s: S) -> FF6Error
 {
-    FF6Error::HexRangeWrapError(e, s.into())
+    FF6Error::HexZeroError(n.into(), s.into())
 }
