@@ -6,13 +6,15 @@ use super::error::{FF6Error, *};
 pub trait ParseIntErrorMapper<T>
 where T: num_traits::Num<FromStrRadixErr = std::num::ParseIntError>
 {
-    fn map_parse_err<S: Into<String>>(self, num: S, input: S, range: bool) -> Result<T, FF6Error>;
+    fn map_parse_err<E, S>(self, num: S, input: S, default: E) -> Result<T, FF6Error>
+    where E: FnOnce(String) -> FF6Error, S: Into<String>;
 }
 
 impl<T> ParseIntErrorMapper<T> for Result<T, std::num::ParseIntError>
 where T: num_traits::Num<FromStrRadixErr = std::num::ParseIntError>
 {
-    fn map_parse_err<S: Into<String>>(self, num: S, input: S, range: bool) -> Result<T, FF6Error>
+    fn map_parse_err<E, S>(self, num: S, input: S, default: E) -> Result<T, FF6Error>
+    where E: FnOnce(String) -> FF6Error, S: Into<String>
     {
         let num = num.into();
         let input = input.into();
@@ -25,8 +27,7 @@ where T: num_traits::Num<FromStrRadixErr = std::num::ParseIntError>
                 | std::num::IntErrorKind::NegOverflow => HexNegOverflowError(num, input),
                 | std::num::IntErrorKind::Zero => HexZeroError(num, input),
                 | std::num::IntErrorKind::Empty => HexError(input),
-                | _ if range == false => HexError(input),
-                | _ => HexRangeError(input),
+                | _ => default(input),
             }),
         }
     }
@@ -61,7 +62,7 @@ impl HexStringTo for &str
         let num = self.trim_start_matches("0x");
 
         // Convert to usize.
-        let num = T::from_str_radix(num, 16).map_parse_err(num, self, false)?;
+        let num = T::from_str_radix(num, 16).map_parse_err(num, self, HexError)?;
         Ok(num)
     }
 
@@ -90,8 +91,8 @@ impl HexStringTo for &str
         let end = range[1].trim_start_matches("0x");
 
         // Convert to usize.
-        let beg = T::from_str_radix(beg, 16).map_parse_err(beg, self, true)?;
-        let end = T::from_str_radix(end, 16).map_parse_err(end, self, true)?;
+        let beg = T::from_str_radix(beg, 16).map_parse_err(beg, self, HexRangeError)?;
+        let end = T::from_str_radix(end, 16).map_parse_err(end, self, HexRangeError)?;
         Ok(beg..end)
     }
 }
