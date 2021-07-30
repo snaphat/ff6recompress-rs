@@ -1,17 +1,17 @@
-use std::ops::Range;
 extern crate paste;
+use std::{num::ParseIntError, ops::Range};
 
 use super::error::{FF6Error, *};
 
 pub trait ParseIntErrorMapper<T>
-where T: num_traits::Num<FromStrRadixErr = std::num::ParseIntError>
+where T: num_traits::Num<FromStrRadixErr = ParseIntError>
 {
     fn map_parse_err<S>(self, num: S, input: S, default: fn(S) -> FF6Error) -> Result<T, FF6Error>
     where S: Into<String>;
 }
 
-impl<T> ParseIntErrorMapper<T> for Result<T, std::num::ParseIntError>
-where T: num_traits::Num<FromStrRadixErr = std::num::ParseIntError>
+impl<T> ParseIntErrorMapper<T> for Result<T, ParseIntError>
+where T: num_traits::Num<FromStrRadixErr = ParseIntError>
 {
     fn map_parse_err<S>(self, num: S, input: S, default: fn(S) -> FF6Error) -> Result<T, FF6Error>
     where S: Into<String>
@@ -34,15 +34,15 @@ where T: num_traits::Num<FromStrRadixErr = std::num::ParseIntError>
 pub trait HexStringTo
 {
     fn hex_to<T>(self) -> Result<T, FF6Error>
-    where T: num_traits::Num<FromStrRadixErr = std::num::ParseIntError>;
+    where T: num_traits::Num<FromStrRadixErr = ParseIntError>;
     fn hex_to_range<T>(self) -> Result<Range<T>, FF6Error>
-    where T: num_traits::Num<FromStrRadixErr = std::num::ParseIntError>;
+    where T: num_traits::Num<FromStrRadixErr = ParseIntError>;
 }
 
 impl HexStringTo for &str
 {
     fn hex_to<T>(self) -> Result<T, FF6Error>
-    where T: num_traits::Num<FromStrRadixErr = std::num::ParseIntError>
+    where T: num_traits::Num<FromStrRadixErr = ParseIntError>
     {
         // Check that string isn't empty.
         if self.len() == 0
@@ -65,7 +65,7 @@ impl HexStringTo for &str
     }
 
     fn hex_to_range<T>(self) -> Result<Range<T>, FF6Error>
-    where T: num_traits::Num<FromStrRadixErr = std::num::ParseIntError>
+    where T: num_traits::Num<FromStrRadixErr = ParseIntError>
     {
         // Check that string isn't empty.
         if self.len() == 0
