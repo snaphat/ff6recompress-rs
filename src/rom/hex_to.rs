@@ -6,18 +6,16 @@ use super::error::{FF6Error, *};
 pub trait ParseIntErrorMapper<T>
 where T: num_traits::Num<FromStrRadixErr = std::num::ParseIntError>
 {
-    fn map_parse_err<E, S>(self, num: S, input: S, default: E) -> Result<T, FF6Error>
-    where E: FnOnce(String) -> FF6Error, S: Into<String>;
+    fn map_parse_err<S>(self, num: S, input: S, default: fn(S) -> FF6Error) -> Result<T, FF6Error>
+    where S: Into<String>;
 }
 
 impl<T> ParseIntErrorMapper<T> for Result<T, std::num::ParseIntError>
 where T: num_traits::Num<FromStrRadixErr = std::num::ParseIntError>
 {
-    fn map_parse_err<E, S>(self, num: S, input: S, default: E) -> Result<T, FF6Error>
-    where E: FnOnce(String) -> FF6Error, S: Into<String>
+    fn map_parse_err<S>(self, num: S, input: S, default: fn(S) -> FF6Error) -> Result<T, FF6Error>
+    where S: Into<String>
     {
-        let num = num.into();
-        let input = input.into();
         match self
         {
             | Ok(num) => Ok(num),
@@ -81,7 +79,7 @@ impl HexStringTo for &str
         #[rustfmt::skip]
         if range.len() != 2
             || !range[0].starts_with("0x") || !range[1].starts_with("0x")
-            ||  range[0].len() < 3          || range[1].len() < 3
+            ||  range[0].len() < 3         ||  range[1].len() < 3
         {
             return Err(HexRangeError(self));
         };
