@@ -38,6 +38,8 @@ macro_rules! two_param_fn {
     }
 }
 
+pub type FF6Result<T> = Result<T, FF6Error>;
+
 #[derive(Error, Debug)]
 pub enum FF6Error
 {
