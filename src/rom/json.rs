@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::{io::Write, ops::Range};
 
 use super::{error::Result, hex_to::HexStringTo};
 use crate::parse_error;
@@ -38,6 +38,15 @@ impl Config
     pub fn new<S: AsRef<str>>(input: S) -> Result<Config>
     {
         Ok(Config { config: serde_json::from_str(input.as_ref())? })
+    }
+
+    pub fn save<S: AsRef<str>>(&self, filename: S) -> Result<()>
+    {
+        let cnfg = serde_json::to_string_pretty(&self.config)?;
+        let mut file = std::fs::File::create(filename.as_ref().to_string() + ".json")?;
+        file.write(cnfg.as_bytes())?;
+
+        Ok(())
     }
 
     #[rustfmt::skip]
@@ -102,27 +111,12 @@ impl Config
         // Return okay.
         Ok(())
     }
-
-    pub fn save<S: AsRef<str>>(&self, filename: S) -> Result<()>
-    {
-        let a = serde_json::to_string_pretty(&self.config)?;
-        let file = std::fs::File::open(filename.as_ref().to_string() + ".json")?;
-        Ok(())
-    }
 }
 
 #[cfg(test)]
 mod test
 {
     use super::Config;
-
-    // #[test]
-    // fn test()
-    // {
-    //     let config = Config::default();
-    //     config.save("dd");
-    //     panic!("dd");
-    // }
 
     #[test]
     fn config_default()
@@ -139,6 +133,15 @@ mod test
             err.to_string(),
             "Error Parsing JSON: `EOF while parsing an object at line 1 column 1`"
         );
+    }
+
+    #[test]
+    fn save()
+    {
+        let config = Config::default();
+        let dir = tempdir::TempDir::new("test_out").expect("Failed to create temp directory.");
+        std::env::set_current_dir(dir).expect("Failed to change directory.");
+        config.save("config").expect("Failed to save file.");
     }
 
     #[test]
