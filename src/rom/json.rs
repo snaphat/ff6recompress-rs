@@ -139,9 +139,10 @@ mod test
     fn save()
     {
         let config = Config::default();
-        let dir = tempdir::TempDir::new("test_out").expect("Failed to create temp directory.");
-        std::env::set_current_dir(dir).expect("Failed to change directory.");
+        let dir = tempfile::tempdir().expect("Failed to create temp directory.");
+        std::env::set_current_dir(&dir).expect("Failed to change directory.");
         config.save("config").expect("Failed to save file.");
+        drop(dir);
     }
 
     #[test]
