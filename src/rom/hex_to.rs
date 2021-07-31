@@ -8,16 +8,15 @@ use super::error::*;
 
 type ParseIntErrorResult<T> = std::result::Result<T, ParseIntError>;
 pub trait Num = num_traits::Num<FromStrRadixErr = ParseIntError>;
-pub trait IS = Into<String>;
 
 pub trait ParseIntErrorMapper<T: Num>
 {
-    fn map_parse_err<S: IS>(self, num: S, input: S, default: FnError<S>) -> Result<T>;
+    fn map_parse_err<S: Into<String>>(self, num: S, input: S, default: FnError<S>) -> Result<T>;
 }
 
 impl<T: Num> ParseIntErrorMapper<T> for ParseIntErrorResult<T>
 {
-    fn map_parse_err<S: IS>(self, num: S, input: S, default: FnError<S>) -> Result<T>
+    fn map_parse_err<S: Into<String>>(self, num: S, input: S, default: FnError<S>) -> Result<T>
     {
         match self
         {

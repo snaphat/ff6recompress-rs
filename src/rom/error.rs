@@ -1,7 +1,6 @@
 extern crate thiserror;
 use self::thiserror::Error;
 
-pub trait IS = Into<String>;
 pub type FnError<S> = fn(S) -> Error;
 
 #[macro_export]
@@ -25,7 +24,7 @@ macro_rules! one_param_fn {
     ($($arg:tt),*) => {
 
         $(  #[allow(non_snake_case)]
-            pub fn $arg<S: IS>(s: S) -> Error {
+            pub fn $arg<S: Into<String>>(s: S) -> Error {
             Error::$arg(s.into()) }
         )*
     }
@@ -35,7 +34,7 @@ macro_rules! two_param_fn {
     ($($arg:tt),*) => {
 
         $(  #[allow(non_snake_case)]
-            pub fn $arg<S: IS>(n: S, s: S) -> Error {
+            pub fn $arg<S: Into<String>>(n: S, s: S) -> Error {
             Error::$arg(n.into(), s.into())
         } )*
     }
