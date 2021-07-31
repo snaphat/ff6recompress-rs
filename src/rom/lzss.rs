@@ -1,9 +1,9 @@
 extern crate apultra;
 use std::cell::RefCell;
 
-use super::error::{DecompressionError, FF6Result};
+use super::error::{DecompressionError, Result};
 
-pub fn decompress(input: &[u8]) -> FF6Result<(Vec<u8>, usize)>
+pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize)>
 {
     // Check if the input is long enough to contain length bytes.
     if input.len() < 2
@@ -35,7 +35,7 @@ pub fn decompress(input: &[u8]) -> FF6Result<(Vec<u8>, usize)>
     let s = RefCell::new(2); // Source index.
 
     // Smart wrapper for iterator. Returns DecompressionError if iterating past the end of the buffer.
-    let mut next = || -> FF6Result<u8> {
+    let mut next = || -> Result<u8> {
         src.next().ok_or(DecompressionError("LZSS: Iterated past end of input buffer")).map(|val| {
             *s.borrow_mut() += 1; // Update source index.
             *val // Return the next value.

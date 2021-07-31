@@ -6,19 +6,18 @@ use std::{
 
 use super::error::*;
 
+type ParseIntErrorResult<T> = std::result::Result<T, ParseIntError>;
 pub trait Num = num_traits::Num<FromStrRadixErr = ParseIntError>;
 pub trait IS = Into<String>;
 
-type FnError<S> = fn(S) -> FF6Error;
-
 pub trait ParseIntErrorMapper<T: Num>
 {
-    fn map_parse_err<S: IS>(self, num: S, input: S, default: FnError<S>) -> FF6Result<T>;
+    fn map_parse_err<S: IS>(self, num: S, input: S, default: FnError<S>) -> Result<T>;
 }
 
-impl<T: Num> ParseIntErrorMapper<T> for Result<T, ParseIntError>
+impl<T: Num> ParseIntErrorMapper<T> for ParseIntErrorResult<T>
 {
-    fn map_parse_err<S: IS>(self, num: S, input: S, default: FnError<S>) -> FF6Result<T>
+    fn map_parse_err<S: IS>(self, num: S, input: S, default: FnError<S>) -> Result<T>
     {
         match self
         {
@@ -37,13 +36,13 @@ impl<T: Num> ParseIntErrorMapper<T> for Result<T, ParseIntError>
 
 pub trait HexStringTo
 {
-    fn hex_to<T: Num>(self) -> FF6Result<T>;
-    fn hex_to_range<T: Num>(self) -> FF6Result<Range<T>>;
+    fn hex_to<T: Num>(self) -> Result<T>;
+    fn hex_to_range<T: Num>(self) -> Result<Range<T>>;
 }
 
 impl HexStringTo for &str
 {
-    fn hex_to<T: Num>(self) -> FF6Result<T>
+    fn hex_to<T: Num>(self) -> Result<T>
     {
         // Check that string isn't empty.
         if self.len() == 0
@@ -65,7 +64,7 @@ impl HexStringTo for &str
         Ok(num)
     }
 
-    fn hex_to_range<T: Num>(self) -> FF6Result<Range<T>>
+    fn hex_to_range<T: Num>(self) -> Result<Range<T>>
     {
         // Check that string isn't empty.
         if self.len() == 0

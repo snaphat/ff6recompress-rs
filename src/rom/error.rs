@@ -1,6 +1,9 @@
 extern crate thiserror;
 use self::thiserror::Error;
 
+pub trait IS = Into<String>;
+pub type FnError<S> = fn(S) -> Error;
+
 #[macro_export]
 macro_rules! parse_error {
     ($($arg:tt)*) => {
@@ -12,8 +15,8 @@ macro_rules! nil_param_fn {
     ($($arg:tt),*) => {
 
         $(  #[allow(non_snake_case)]
-            pub fn $arg() -> FF6Error {
-            FF6Error::$arg() }
+            pub fn $arg() -> Error {
+            Error::$arg() }
         )*
     }
 }
@@ -22,8 +25,8 @@ macro_rules! one_param_fn {
     ($($arg:tt),*) => {
 
         $(  #[allow(non_snake_case)]
-            pub fn $arg<S: Into<String>>(s: S) -> FF6Error {
-            FF6Error::$arg(s.into()) }
+            pub fn $arg<S: IS>(s: S) -> Error {
+            Error::$arg(s.into()) }
         )*
     }
 }
@@ -32,16 +35,16 @@ macro_rules! two_param_fn {
     ($($arg:tt),*) => {
 
         $(  #[allow(non_snake_case)]
-            pub fn $arg<S: Into<String>>(n: S, s: S) -> FF6Error {
-            FF6Error::$arg(n.into(), s.into())
+            pub fn $arg<S: IS>(n: S, s: S) -> Error {
+            Error::$arg(n.into(), s.into())
         } )*
     }
 }
 
-pub type FF6Result<T> = Result<T, FF6Error>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
-pub enum FF6Error
+pub enum Error
 {
     // From Errors:
     #[error("Error Parsing JSON: `{source}`")]

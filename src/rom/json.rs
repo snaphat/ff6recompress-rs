@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use super::{error::FF6Result, hex_to::HexStringTo};
+use super::{error::Result, hex_to::HexStringTo};
 use crate::parse_error;
 
 #[derive(Debug)]
@@ -35,13 +35,13 @@ impl Config
         Config { config: serde_json::from_str(CONFIG as &str).unwrap() }
     }
 
-    pub fn new<S: AsRef<str>>(input: S) -> FF6Result<Config>
+    pub fn new<S: AsRef<str>>(input: S) -> Result<Config>
     {
         Ok(Config { config: serde_json::from_str(input.as_ref())? })
     }
 
     #[rustfmt::skip]
-    pub fn extract<S: AsRef<str>>(&self, field: S) -> FF6Result<ExtractedData>
+    pub fn extract<S: AsRef<str>>(&self, field: S) -> Result<ExtractedData>
     {
         let field = field.as_ref();
         // Setup error printout in case of failure.
@@ -90,7 +90,7 @@ impl Config
     }
 
     #[rustfmt::skip]
-    pub fn insert<S: AsRef<str>>(&mut self, field: S, range: Range<usize>) -> FF6Result<()>
+    pub fn insert<S: AsRef<str>>(&mut self, field: S, range: Range<usize>) -> Result<()>
     {
         let field = field.as_ref();
         // Setup Error.
@@ -103,7 +103,7 @@ impl Config
         Ok(())
     }
 
-    pub fn save<S: AsRef<str>>(&self, filename: S) -> FF6Result<()>
+    pub fn save<S: AsRef<str>>(&self, filename: S) -> Result<()>
     {
         let a = serde_json::to_string_pretty(&self.config)?;
         let file = std::fs::File::open(filename.as_ref().to_string() + ".json")?;
