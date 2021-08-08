@@ -1,7 +1,10 @@
 use std::{io::Write, ops::Range};
 
-use super::{error::Result, hex_to::HexStringTo};
-use crate::parse_error;
+use super::{
+    error::{JsonError, Result},
+    hex_to::HexStringTo,
+};
+use crate::JsonError;
 
 #[derive(Debug)]
 pub struct ExtractedData
@@ -26,10 +29,27 @@ pub struct Config
     config: serde_json::Value,
 }
 
+pub trait SerdeAsTrait
+{
+    fn as_usize(&self) -> Option<usize>;
+    fn as_string(&self) -> Option<String>;
+}
+
+impl SerdeAsTrait for serde_json::value::Value
+{
+    fn as_usize(&self) -> Option<usize>
+    {
+        self.as_u64().map(|x| x as usize)
+    }
+
+    fn as_string(&self) -> Option<String>
+    {
+        self.as_str().map(|x| x.to_string())
+    }
+}
+
 impl Config
 {
-    const FAIL: &'static str = "failed to find JSON entry";
-
     pub fn default() -> Config
     {
         Config { config: serde_json::from_str(CONFIG as &str).unwrap() }
@@ -49,43 +69,55 @@ impl Config
         Ok(())
     }
 
-    #[rustfmt::skip]
     pub fn extract<S: AsRef<str>>(&self, field: S) -> Result<ExtractedData>
     {
         let field = field.as_ref();
-        // Setup error printout in case of failure.
-        let err = parse_error!("{} '/assembly/{}'", Config::FAIL, field);
+
         // Lookup outer json.
-        self.config["assembly"][field].as_object().ok_or(err)?;
+        self.config["assembly"][field]
+            .as_object()
+            .ok_or(JsonError(format!("/assembly/{}", field)))?;
+
         let j_entry = &self.config["assembly"][field];
         let j_table = &j_entry["pointerTable"];
-        // Extract maybe entries.
-        let name = j_entry["name"].as_str();   // Name of compressed data, e.g. 'CinematicProgram'.
-        let range = j_entry["range"].as_str(); // Range of compressed data in format of '0xYYYYYY-0xZZZZZZ'.
-        // Setup error printout in case of failure.
-        let err = |x| parse_error!("{} '/assembly/{}/{}'", Config::FAIL, field, x);
-        // Check and return entry name and range.
-        let name = name.ok_or(err("name"))?.to_string();
-        let range = range.ok_or(err("range"))?.hex_to_range::<usize>()?;
+
+        // Decode name of compressed data, e.g. 'CinematicProgram'.
+        let name = j_entry["name"]
+            .as_string() // /
+            .ok_or(JsonError!("/assembly/{}/name", field))?;
+
+        // Decode range of compressed data in format of '0xYYYYYY-0xZZZZZZ'.
+        let range = j_entry["range"]
+            .as_string()
+            .ok_or(JsonError!("/assembly/{}/range", field))?
+            .hex_to_range()?;
 
         // If pointer table exists, then this entry has an array of compressed sub-entries.
+        // Check and return array length, pointer size, table offset, and table range.
         if let Some(_) = j_table.as_object()
         {
-            // Setup error printout in case of failure.
-            let err  = |x| parse_error!("{} '/assembly/{}/{}'", Config::FAIL, field, x);
-            let err2 = |x| parse_error!("{} '/assembly/{}/pointerTable/{}'", Config::FAIL, field, x);
-            // Extact inner maybe entries.
-            let arr_len1 = j_entry["arrayLength"].as_u64();     // There are two possible array length entries.
-            let arr_len2 = j_entry["array"]["length"].as_u64(); // But, only 1 should exist at a time.
-            let ptr_size = j_table["pointerLength"].as_u64();   // Pointer sizes can vary from 1 to 3.
-            let tbl_offs = j_table["offset"].as_str();          // Table offset in format of '0xYYYYYY'.
-            let tbl_rnge = j_table["range"].as_str();           // Range in format of '0xYYYYYY-0xZZZZZZ'.
+            // Decode table offset. There are two possible array length entries.
+            let arr_len = j_entry["arrayLength"]
+                .as_usize() // Try first entry.
+                .or(j_entry["array"]["length"].as_usize()) // Try second entry.
+                .ok_or(JsonError!("/assembly/{}/arrayLength", field))?; // Error if neither exist.
 
-            // Check and return array length entry 1 or 2, pointer size, table offset, and table range.
-            let arr_len  = arr_len1.or(arr_len2).ok_or(err("arrayLength"))? as usize; // Default: None (ParseError).
-            let ptr_size = ptr_size.map_or(2 as usize, |x| x as usize);               // Default: 2.
-            let tbl_offs = tbl_offs.map_or(Ok(0 as usize), |x| x.hex_to::<usize>())?; // Default: 0.
-            let tbl_rnge = tbl_rnge.ok_or(err2("range"))?.hex_to_range::<usize>()?;   // Default: None (ParseError).
+            // Decode pointer size (an integer that can vary from 1 to 3).
+            let ptr_size = j_table["pointerLength"]
+                .as_usize() // /
+                .unwrap_or(2); // Default to 2 if entry doesn't exist.
+
+            // Decode table offset in the format of '0xYYYYYY' and convert to usize.
+            let tbl_offs = j_table["offset"]
+                .as_str()
+                .unwrap_or("0x0") // Default to 0 if entry doesn't exist.
+                .hex_to()?; // Error if not parseable.
+
+            // Decode range in format of '0xYYYYYY-0xZZZZZZ' and convert to usize range.
+            let tbl_rnge = j_table["range"]
+                .as_str()
+                .ok_or(JsonError!("/assembly/{}/pointerTable/range", field))?
+                .hex_to_range()?; // Error if not parseable.
 
             // Return entry with pointer table and array of compressed sub-entries.
             let table = PointerTable { range: tbl_rnge, offset: tbl_offs, ptr_size, arr_len };
@@ -98,15 +130,18 @@ impl Config
         }
     }
 
-    #[rustfmt::skip]
     pub fn insert<S: AsRef<str>>(&mut self, field: S, range: Range<usize>) -> Result<()>
     {
         let field = field.as_ref();
-        // Setup Error.
-        let err = parse_error!("{} '/assembly/{}/range'", Config::FAIL, field);
+
         // Get mutuable JSON Pointer, Convert range into string, and insert into JSON Pointer.
-        let j_range = self.config["assembly"][field].pointer_mut("/range").ok_or(err)?;
+        let j_range = self.config["assembly"][field]
+            .pointer_mut("/range")
+            .ok_or(JsonError(format!("/assembly/{}/range", field)))?;
+
         let s_range = format!("{:#08X}-{:#08X}", range.start, range.end);
+
+        // Insert new json.
         *j_range = serde_json::json!(s_range);
         // Return okay.
         Ok(())
@@ -240,7 +275,7 @@ mod test
         let err = config.extract("CinematicProgram").unwrap_err();
         assert_eq!(
             err.to_string(),
-            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/pointerTable/range'`"
+            "Error Parsing: failed to find JSON entry `/assembly/CinematicProgram/pointerTable/range`"
         );
     }
 
@@ -261,7 +296,7 @@ mod test
         let err = config.extract("CinematicProgram").unwrap_err();
         assert_eq!(
             err.to_string(),
-            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/arrayLength'`"
+            "Error Parsing: failed to find JSON entry `/assembly/CinematicProgram/arrayLength`"
         );
     }
 
@@ -281,7 +316,7 @@ mod test
         let err = config.extract("NotEntry").unwrap_err();
         assert_eq!(
             err.to_string(),
-            "Error Parsing: `failed to find JSON entry '/assembly/NotEntry'`"
+            "Error Parsing: failed to find JSON entry `/assembly/NotEntry`"
         );
     }
 
@@ -298,7 +333,7 @@ mod test
         let err = config.extract("CinematicProgram").unwrap_err();
         assert_eq!(
             err.to_string(),
-            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/name'`"
+            "Error Parsing: failed to find JSON entry `/assembly/CinematicProgram/name`"
         );
     }
 
@@ -317,7 +352,7 @@ mod test
         let err = config.extract("CinematicProgram").unwrap_err();
         assert_eq!(
             err.to_string(),
-            "Error Parsing: `failed to find JSON entry '/assembly/CinematicProgram/range'`"
+            "Error Parsing: failed to find JSON entry `/assembly/CinematicProgram/range`"
         );
     }
 
@@ -353,7 +388,7 @@ mod test
         let err = config.insert("NotEntry", 0xFFFFFF..0x000000).unwrap_err();
         assert_eq!(
             err.to_string(),
-            "Error Parsing: `failed to find JSON entry '/assembly/NotEntry/range'`"
+            "Error Parsing: failed to find JSON entry `/assembly/NotEntry/range`"
         );
     }
 }
