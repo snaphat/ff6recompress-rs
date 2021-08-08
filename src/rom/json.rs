@@ -73,7 +73,7 @@ impl Config
     {
         let field = field.as_ref();
 
-        // Lookup outer json.
+        // Lookup outer json and fail early if it isn't correct.
         self.config["assembly"][field]
             .as_object()
             .ok_or(JsonError(format!("/assembly/{}", field)))?;
