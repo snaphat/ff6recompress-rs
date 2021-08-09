@@ -6,7 +6,7 @@ pub type FnError<S> = fn(S) -> Error;
 #[macro_export]
 macro_rules! JsonError {
     ($($arg:tt)*) => {
-        super::error::JsonError(format!($($arg)*))
+        crate::error::JsonError(format!($($arg)*))
     }
 }
 
@@ -39,8 +39,6 @@ macro_rules! two_param_fn {
         } )*
     }
 }
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)] #[rustfmt::skip]
 pub enum Error

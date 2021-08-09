@@ -1,7 +1,6 @@
 use std::error::Error;
 
 mod aplib;
-mod error;
 mod hex_to;
 mod json;
 mod lzss;

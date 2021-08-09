@@ -1,4 +1,4 @@
-use super::error::{DecompressionError, Result};
+use crate::{error::DecompressionError, result::Result};
 
 pub fn compress(input: &[u8]) -> Result<Vec<u8>>
 {

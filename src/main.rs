@@ -1,6 +1,8 @@
 #![feature(trait_alias)]
 use std::{fs, io};
 
+mod error;
+mod result;
 mod rom;
 
 fn open(path: &str) -> Result<Vec<u8>, io::Error>

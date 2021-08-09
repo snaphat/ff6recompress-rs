@@ -1,7 +1,7 @@
 extern crate apultra;
 use std::cell::RefCell;
 
-use super::error::{DecompressionError, Result};
+use crate::{error::DecompressionError, result::Result};
 
 pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize)>
 {

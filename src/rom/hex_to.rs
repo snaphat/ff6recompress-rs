@@ -4,7 +4,7 @@ use std::{
     ops::Range,
 };
 
-use super::error::*;
+use crate::{error::*, result::Result};
 
 type ParseIntErrorResult<T> = std::result::Result<T, ParseIntError>;
 pub trait Num = num_traits::Num<FromStrRadixErr = ParseIntError>;
