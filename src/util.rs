@@ -1,4 +1,3 @@
-extern crate paste;
 use std::{
     num::{IntErrorKind, ParseIntError},
     ops::Range,

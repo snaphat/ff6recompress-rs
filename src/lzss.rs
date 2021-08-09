@@ -1,4 +1,3 @@
-extern crate apultra;
 use std::cell::RefCell;
 
 use crate::{error::DecompressionError, result::Result};
