@@ -1,8 +1,6 @@
 use std::error::Error;
 
-mod json;
-
-use crate::{aplib, lzss};
+use crate::{aplib, json, lzss};
 
 fn conv_addr(addr: usize) -> usize
 {

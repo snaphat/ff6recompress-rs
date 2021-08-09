@@ -3,6 +3,7 @@ use std::{fs, io};
 
 mod aplib;
 mod error;
+mod json;
 mod lzss;
 mod result;
 mod rom;
