@@ -45,6 +45,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Error, Debug)] #[rustfmt::skip]
 pub enum Error
 {
+    // Transparent Errors:
+    #[error(transparent)]
+    TransApultraError { #[from] source: apultra::Error },
+
     // From Errors:
     #[error("Error Parsing JSON: `{source}`")]
     FromJsonError { #[from] source: serde_json::Error },
@@ -56,8 +60,6 @@ pub enum Error
     HexEmptyError(),
 
     // Single Parameter Errors:
-    #[error("Compression Error: `{0}`")]
-    CompressionError(String),
     #[error("Decompression Error: `{0}`")]
     DecompressionError(String),
     #[error("Error Parsing: failed to find JSON entry `{0}`")]
@@ -66,8 +68,6 @@ pub enum Error
     HexError(String),
     #[error("Error Parsing: invalid hex string range `{0}`")]
     HexRangeError(String),
-    #[error("Error Parsing: `{0}`")]
-    ParseError(String),
 
     // Two Parameter Errors:
     #[error("Error Parsing: number `0x{0}` too small to fit in target type for hex string `{1}`")]
@@ -78,5 +78,5 @@ pub enum Error
     HexZeroError(String, String),
 }
 nil_param_fn!(HexEmptyError);
-one_param_fn!(CompressionError, DecompressionError, JsonError, HexError, HexRangeError, ParseError);
+one_param_fn!(DecompressionError, JsonError, HexError, HexRangeError);
 two_param_fn!(HexNegOverflowError, HexPosOverflowError, HexZeroError);
