@@ -6,6 +6,7 @@ mod error;
 mod lzss;
 mod result;
 mod rom;
+mod hex_to;
 
 fn open(path: &str) -> Result<Vec<u8>, io::Error>
 {

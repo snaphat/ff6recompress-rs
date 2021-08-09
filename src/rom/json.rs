@@ -1,6 +1,6 @@
 use std::{io::Write, ops::Range};
 
-use rom::hex_to::HexStringTo;
+use crate::hex_to::HexStringTo;
 
 use crate::{error::JsonError, result::Result, JsonError};
 

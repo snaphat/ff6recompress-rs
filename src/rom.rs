@@ -1,6 +1,5 @@
 use std::error::Error;
 
-mod hex_to;
 mod json;
 
 use crate::{aplib, lzss};
