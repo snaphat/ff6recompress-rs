@@ -1,5 +1,4 @@
-extern crate thiserror;
-use self::thiserror::Error;
+use thiserror::Error;
 
 pub type FnError<S> = fn(S) -> Error;
 
