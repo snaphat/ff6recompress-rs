@@ -2,7 +2,6 @@ extern crate apultra;
 use std::cell::RefCell;
 
 use crate::{error::DecompressionError, result::Result};
-
 pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize)>
 {
     // Check if the input is long enough to contain length bytes.

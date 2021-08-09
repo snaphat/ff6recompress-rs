@@ -1,9 +1,9 @@
 use std::error::Error;
 
-mod aplib;
 mod hex_to;
 mod json;
-mod lzss;
+
+use crate::{aplib, lzss};
 
 fn conv_addr(addr: usize) -> usize
 {

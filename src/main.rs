@@ -1,7 +1,9 @@
 #![feature(trait_alias)]
 use std::{fs, io};
 
+mod aplib;
 mod error;
+mod lzss;
 mod result;
 mod rom;
 
