@@ -29,7 +29,11 @@ fn main()
         },
     };
 
-    rom.recompress("dd", 0xC4C008);
+    match rom.process()
+    {
+        | Err(e) => println!("{}", e),
+        | _ => println!("ok"),
+    };
 
     println!("Hello, world!");
 }
