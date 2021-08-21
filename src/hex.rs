@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     error::{
-        HexEmptyError, HexError, HexNegOverflowError, HexPosOverflowError, HexRangeError,
+        FnError, HexEmptyError, HexError, HexNegOverflowError, HexPosOverflowError, HexRangeError,
         HexZeroError,
     },
     result::Result,
