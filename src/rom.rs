@@ -107,8 +107,7 @@ impl Rom
             },
             | Some(tbl) =>
             {
-                println!("{}", data.name);
-                println!("{} {}", tbl.offset, tbl.ptr_size);
+                print!(" \x1b[33m-\x1b[36m {}\x1b[33m...\x1b[39m", data.name);
 
                 let mut tbl_entry = TblEntry { idx: conv_addr(tbl.range.start), len: tbl.ptr_size };
 
@@ -141,7 +140,7 @@ impl Rom
 
                     // Create insert data (if  any).
                     let data_len = data.len();
-                    //self.rom.splice(new_do..new_do + data_len, data);
+                    self.rom.splice(new_do..new_do + data_len, data);
 
                     // Try to insert data into lookup table and get returned dp.
                     let dp = match lookup_tbl.try_insert(hash, new_dp)
@@ -153,11 +152,12 @@ impl Rom
 
                     // extract table pointer for next entry & get next data ptrs.
                     tbl_entry += 1;
-                    old_dp = self.rom.extract_ptr(tbl_entry);
-                    new_dp += data_len;
+                    old_dp     = self.rom.extract_ptr(tbl_entry);
+                    new_dp    += data_len;
                 }
             },
         };
+        println!("{:width$}\x1b[31mdone\x1b[39m", "", width=(55-data.name.len()));
 
         Ok(())
     }
@@ -191,6 +191,9 @@ impl Rom
             "worldGraphics2",
             "worldLayout2",
         ];
+
+        println!("\x1b[33mFile Size (bytes)\x1b[36m: \x1b[32m{}\x1b[39m", self.rom.len());
+        println!("\x1b[33mRecompressing\x1b[36m:\x1b[39m");
 
         for entry in entries.iter()
         {

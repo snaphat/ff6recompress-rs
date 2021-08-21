@@ -2,7 +2,7 @@ use crate::{error::DecompressionError, result::Result};
 
 pub fn compress(input: &[u8]) -> Result<Vec<u8>>
 {
-    let window_size = 1024;
+    let window_size = 0x10000;
     let dictionary_size = 0;
     let flags = 0;
     let progress = None;
