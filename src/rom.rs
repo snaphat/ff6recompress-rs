@@ -4,8 +4,7 @@ use std::{
     ops::AddAssign,
 };
 
-use crate::error::IndexError;
-use crate::{aplib, hash::HashOne, json, lzss, result::Result};
+use crate::{aplib, error::IndexError, hash::HashOne, json, lzss, result::Result};
 fn conv_addr(addr: usize) -> usize
 {
     if addr & 0x408000 != 0 { addr & 0x3FFFFF } else { 0x0 }
