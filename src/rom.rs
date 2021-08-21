@@ -135,6 +135,7 @@ impl Rom
                     };
 
                     // Hash newly compressed data.
+                    let hash = data.hash_one();
 
                     // Try to insert data into lookup table and get returned dp.
                     let (data, dp) = match lookup_tbl.try_insert(hash, new_dp)
