@@ -1,7 +1,8 @@
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
     hash::{Hash, Hasher},
-    ops::{Add, AddAssign, Deref, Index, IndexMut, Range},
+    io::{stdout, Write},
+    ops::AddAssign,
 };
 
 use crate::{aplib, json, lzss, result::Result};
@@ -95,6 +96,8 @@ impl Rom
     {
         // Extract data pointer logic.
         let data = self.config.extract(entry)?;
+        print!(" \x1b[33m-\x1b[36m {}\x1b[33m...\x1b[39m", data.name);
+        stdout().flush().unwrap();
         match data.table
         {
             | None =>
@@ -102,13 +105,11 @@ impl Rom
                 let bank_offset = data.range.start;
                 let offset = conv_addr(bank_offset);
                 let data = self._recompress(offset)?;
-                self.config.insert(entry, bank_offset..bank_offset + data.len())?;
-                self.rom.splice(offset..data.len(), data);
+                self.rom.splice(offset..offset + data.len(), data);
+                //self.config.insert(entry, bank_offset..bank_offset + data.len())?;
             },
             | Some(tbl) =>
             {
-                print!(" \x1b[33m-\x1b[36m {}\x1b[33m...\x1b[39m", data.name);
-
                 let mut tbl_entry = TblEntry { idx: conv_addr(tbl.range.start), len: tbl.ptr_size };
 
                 // extract tbl pointer for next entry & convert to little endian.
@@ -123,8 +124,6 @@ impl Rom
                     // Compute data offsets.
                     let old_do = conv_addr(tbl.offset + old_dp);
                     let new_do = conv_addr(tbl.offset + new_dp);
-
-                    println!("{}", old_dp); // Compress data.
 
                     // ensure old dp is after the initial.
                     let data = match old_dp < init_dp
@@ -157,7 +156,7 @@ impl Rom
                 }
             },
         };
-        println!("{:width$}\x1b[31mdone\x1b[39m", "", width=(55-data.name.len()));
+        println!("{:width$}\x1b[31mdone\x1b[39m", "", width = (55 - data.name.len()));
 
         Ok(())
     }
@@ -193,12 +192,15 @@ impl Rom
         ];
 
         println!("\x1b[33mFile Size (bytes)\x1b[36m: \x1b[32m{}\x1b[39m", self.rom.len());
-        println!("\x1b[33mRecompressing\x1b[36m:\x1b[39m");
+        println!("\n\x1b[33mRecompressing\x1b[36m:\x1b[39m");
 
         for entry in entries.iter()
         {
             self.recompress(entry)?;
         }
+
+        println!("\n\x1b[33mTotal savings (bytes)\x1b[36m: \x1b[32m{}\x1b[39m", self.saved_bytes);
+
         Ok(())
     }
 }

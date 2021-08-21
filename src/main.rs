@@ -33,8 +33,6 @@ fn main()
     match rom.process()
     {
         | Err(e) => println!("{}", e),
-        | _ => println!("ok"),
+        | _ => (),
     };
-
-    println!("Hello, world!");
 }
