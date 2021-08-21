@@ -92,6 +92,7 @@ impl Rom
         Ok(recompressed)
     }
 
+    #[rustfmt::skip]
     pub fn recompress(&mut self, json_entry: &str) -> Result<()>
     {
         // Extract data pointer logic.
@@ -100,24 +101,22 @@ impl Rom
         stdout().flush().unwrap();
         let data_range = match data.table
         {
-            | None =>
-            // single entry.
+            | None =>       // single entry.
             {
                 let bank_offset = data.range.start;
-                let offset = conv_addr(bank_offset);
-                let data = self._recompress(offset)?;
-                let data_len = data.len();
-                let data_entry = offset..offset + data_len;
+                let offset      = conv_addr(bank_offset);
+                let data        = self._recompress(offset)?;
+                let data_len    = data.len();
+                let data_entry  = offset..offset + data_len;
                 self.rom.splice(data_entry, data);
                 bank_offset..bank_offset + data_len
             }
-            | Some(tbl) =>
-            // multiple entries.
+            | Some(tbl) =>  // multiple entries.
             {
                 let mut tbl_entry = TblEntry { idx: conv_addr(tbl.range.start), len: tbl.ptr_size };
 
-                // extract init table pointer for next entry & get next data ptrs.
-                let init_dp = self.rom.extract_ptr(tbl_entry);
+                // extract init table data pointer for next entry & get next data ptrs.
+                let init_dp    = self.rom.extract_ptr(tbl_entry);
                 let mut old_dp = init_dp;
                 let mut new_dp = init_dp;
 
@@ -133,7 +132,7 @@ impl Rom
                     // ensure old dp is after the initial.
                     let data = match old_dp < init_dp
                     {
-                        | true => vec![0u8; 0],               // invalid pointer.
+                        | true  => vec![0u8; 0],              // invalid pointer.
                         | false => self._recompress(old_do)?, // valid pointer.
                     };
 
@@ -143,22 +142,22 @@ impl Rom
                     let hash = hash.finish();
 
                     // Splice in data (if any).
-                    let data_len = data.len();
+                    let data_len   = data.len();
                     let data_entry = new_do..new_do + data_len;
                     self.rom.splice(data_entry, data);
 
                     // Try to insert data into lookup table and get returned dp.
                     let dp = match lookup_tbl.try_insert(hash, new_dp)
                     {
-                        | Ok(value) => *value, // new entry.
-                        | Err(kv) => kv.value, // duplicate entry.
+                        | Ok(value) => *value,   // new entry.
+                        | Err(kv)   => kv.value, // duplicate entry.
                     };
                     self.rom.splice_ptr(tbl_entry, dp); // splice in data ptr.
 
                     // extract table pointer for next entry & get next data ptrs.
                     tbl_entry += 1;
-                    old_dp = self.rom.extract_ptr(tbl_entry);
-                    new_dp += data_len;
+                    old_dp     = self.rom.extract_ptr(tbl_entry);
+                    new_dp    += data_len;
                 }
                 tbl.offset + init_dp..tbl.offset + new_dp
             }
