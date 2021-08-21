@@ -1,12 +1,10 @@
 use std::{
-    collections::{hash_map::DefaultHasher, HashMap},
-    hash::{Hash, Hasher},
+    collections::HashMap,
     io::{stdout, Write},
     ops::AddAssign,
 };
 
-use crate::{aplib, json, lzss, result::Result};
-
+use crate::{aplib, hash::HashOne, json, lzss, result::Result};
 fn conv_addr(addr: usize) -> usize
 {
     if addr & 0x408000 != 0 { addr & 0x3FFFFF } else { 0x0 }
@@ -137,21 +135,18 @@ impl Rom
                     };
 
                     // Hash newly compressed data.
-                    let mut hash = DefaultHasher::new();
-                    data.hash(&mut hash);
-                    let hash = hash.finish();
+
+                    // Try to insert data into lookup table and get returned dp.
+                    let (data, dp) = match lookup_tbl.try_insert(hash, new_dp)
+                    {
+                        | Ok(value) => (data, *value),   // new entry.
+                        | Err(kv)   => (vec![0u8; 0], kv.value), // duplicate entry.
+                    };
 
                     // Splice in data (if any).
                     let data_len   = data.len();
                     let data_entry = new_do..new_do + data_len;
                     self.rom.splice(data_entry, data);
-
-                    // Try to insert data into lookup table and get returned dp.
-                    let dp = match lookup_tbl.try_insert(hash, new_dp)
-                    {
-                        | Ok(value) => *value,   // new entry.
-                        | Err(kv)   => kv.value, // duplicate entry.
-                    };
                     self.rom.splice_ptr(tbl_entry, dp); // splice in data ptr.
 
                     // extract table pointer for next entry & get next data ptrs.

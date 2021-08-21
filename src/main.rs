@@ -4,6 +4,7 @@ use std::{fs, io};
 
 mod aplib;
 mod error;
+mod hash;
 mod json;
 mod lzss;
 mod result;
