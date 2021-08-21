@@ -146,7 +146,7 @@ mod test
         let err = decompress(&[3, 0, 1, 1]).unwrap_err();
         assert_eq!(
             err.to_string(),
-            "Decompression Error: `LZSS: Iterated past end of input buffer`"
+            "Decompression Error: `LZSS: Iterated past end of input buffer (>1)`"
         );
     }
 }
