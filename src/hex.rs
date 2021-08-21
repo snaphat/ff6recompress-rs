@@ -3,7 +3,13 @@ use std::{
     ops::Range,
 };
 
-use crate::{error::*, result::Result};
+use crate::{
+    error::{
+        HexEmptyError, HexError, HexNegOverflowError, HexPosOverflowError, HexRangeError,
+        HexZeroError,
+    },
+    result::Result,
+};
 
 type ParseIntErrorResult<T> = std::result::Result<T, ParseIntError>;
 pub trait Num = num_traits::Num<FromStrRadixErr = ParseIntError>;
