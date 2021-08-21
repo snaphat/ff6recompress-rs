@@ -1,4 +1,5 @@
 #![feature(trait_alias)]
+#![feature(map_try_insert)]
 use std::{fs, io};
 
 mod aplib;

@@ -34,10 +34,15 @@ pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize)>
 
     // Smart wrapper for iterator. Returns DecompressionError if iterating past the end of the buffer.
     let mut next = || -> Result<u8> {
-        src.next().ok_or(DecompressionError("LZSS: Iterated past end of input buffer")).map(|val| {
-            *s.borrow_mut() += 1; // Update source index.
-            *val // Return the next value.
-        })
+        src.next()
+            .ok_or(DecompressionError(format!(
+                "LZSS: Iterated past end of input buffer (>{})",
+                length - 2
+            )))
+            .map(|val| {
+                *s.borrow_mut() += 1; // Update source index.
+                *val // Return the next value.
+            })
     };
 
     // allocate intermediate buffer starting at index 0x07DE (ff6 start).
