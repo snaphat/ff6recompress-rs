@@ -4,6 +4,7 @@ use std::{
     ops::AddAssign,
 };
 
+use crate::error::IndexError;
 use crate::{aplib, hash::HashOne, json, lzss, result::Result};
 fn conv_addr(addr: usize) -> usize
 {
@@ -12,33 +13,34 @@ fn conv_addr(addr: usize) -> usize
 
 trait TblPtr
 {
-    fn splice_ptr(&mut self, r: TblEntry, ptr: usize) -> ();
+    fn splice_ptr(&mut self, r: TblEntry, ptr: usize) -> Result<()>;
 
-    fn extract_ptr(&self, r: TblEntry) -> usize;
+    fn extract_ptr(&self, r: TblEntry) -> Result<usize>;
 }
 
 impl TblPtr for [u8]
 {
-    fn splice_ptr(&mut self, r: TblEntry, ptr: usize) -> ()
+    fn splice_ptr(&mut self, r: TblEntry, ptr: usize) -> Result<()>
     {
         let mut ptr = ptr; // store mutable copy.
-        let tbl_entry = &mut self[r.idx..r.idx + r.len];
+        let tbl_entry = self.get_mut(r.idx..r.idx + r.len).ok_or(IndexError())?;
         for i in 0..r.len
         {
             tbl_entry[i] = ptr as u8; // store in big endian.
             ptr >>= 8; // shift right.
         }
+        Ok(())
     }
 
-    fn extract_ptr(&self, r: TblEntry) -> usize
+    fn extract_ptr(&self, r: TblEntry) -> Result<usize>
     {
         let mut ptr: usize = 0;
-        let tbl_entry = &self[r.idx..r.idx + r.len];
+        let tbl_entry = self.get(r.idx..r.idx + r.len).ok_or(IndexError())?;
         for i in 0..r.len
         {
             ptr += (tbl_entry[i] as usize) << (8 * i);
         }
-        ptr
+        Ok(ptr)
     }
 }
 
@@ -114,7 +116,7 @@ impl Rom
                 let mut tbl_entry = TblEntry { idx: conv_addr(tbl.range.start), len: tbl.ptr_size };
 
                 // extract init table data pointer for next entry & get next data ptrs.
-                let init_dp    = self.rom.extract_ptr(tbl_entry);
+                let init_dp    = self.rom.extract_ptr(tbl_entry)?;
                 let mut old_dp = init_dp;
                 let mut new_dp = init_dp;
 
@@ -148,11 +150,11 @@ impl Rom
                     let data_len   = data.len();
                     let data_entry = new_do..new_do + data_len;
                     self.rom.splice(data_entry, data);
-                    self.rom.splice_ptr(tbl_entry, dp); // splice in data ptr.
+                    self.rom.splice_ptr(tbl_entry, dp)?; // splice in data ptr.
 
                     // extract table pointer for next entry & get next data ptrs.
                     tbl_entry += 1;
-                    old_dp     = self.rom.extract_ptr(tbl_entry);
+                    old_dp     = self.rom.extract_ptr(tbl_entry)?;
                     new_dp    += data_len;
                 }
                 tbl.offset + init_dp..tbl.offset + new_dp
