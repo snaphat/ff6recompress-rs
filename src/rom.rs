@@ -92,31 +92,36 @@ impl Rom
         Ok(recompressed)
     }
 
-    pub fn recompress(&mut self, entry: &str) -> Result<()>
+    pub fn recompress(&mut self, json_entry: &str) -> Result<()>
     {
         // Extract data pointer logic.
-        let data = self.config.extract(entry)?;
+        let data = self.config.extract(json_entry)?;
         print!(" \x1b[33m-\x1b[36m {}\x1b[33m...\x1b[39m", data.name);
         stdout().flush().unwrap();
-        match data.table
+        let data_range = match data.table
         {
             | None =>
+            // single entry.
             {
                 let bank_offset = data.range.start;
                 let offset = conv_addr(bank_offset);
                 let data = self._recompress(offset)?;
-                self.rom.splice(offset..offset + data.len(), data);
-                //self.config.insert(entry, bank_offset..bank_offset + data.len())?;
-            },
+                let data_len = data.len();
+                let data_entry = offset..offset + data_len;
+                self.rom.splice(data_entry, data);
+                bank_offset..bank_offset + data_len
+            }
             | Some(tbl) =>
+            // multiple entries.
             {
                 let mut tbl_entry = TblEntry { idx: conv_addr(tbl.range.start), len: tbl.ptr_size };
 
-                // extract tbl pointer for next entry & convert to little endian.
+                // extract init table pointer for next entry & get next data ptrs.
                 let init_dp = self.rom.extract_ptr(tbl_entry);
                 let mut old_dp = init_dp;
                 let mut new_dp = init_dp;
 
+                // Lookup table for detecting duplicate entries.
                 let mut lookup_tbl = HashMap::new();
 
                 for _ in 0..tbl.arr_len
@@ -137,9 +142,10 @@ impl Rom
                     data.hash(&mut hash);
                     let hash = hash.finish();
 
-                    // Create insert data (if  any).
+                    // Splice in data (if any).
                     let data_len = data.len();
-                    self.rom.splice(new_do..new_do + data_len, data);
+                    let data_entry = new_do..new_do + data_len;
+                    self.rom.splice(data_entry, data);
 
                     // Try to insert data into lookup table and get returned dp.
                     let dp = match lookup_tbl.try_insert(hash, new_dp)
@@ -151,11 +157,16 @@ impl Rom
 
                     // extract table pointer for next entry & get next data ptrs.
                     tbl_entry += 1;
-                    old_dp     = self.rom.extract_ptr(tbl_entry);
-                    new_dp    += data_len;
+                    old_dp = self.rom.extract_ptr(tbl_entry);
+                    new_dp += data_len;
                 }
-            },
+                tbl.offset + init_dp..tbl.offset + new_dp
+            }
         };
+
+        // Insert updated json entry with new data range.
+        self.config.update(json_entry, data_range)?;
+
         println!("{:width$}\x1b[31mdone\x1b[39m", "", width = (55 - data.name.len()));
 
         Ok(())

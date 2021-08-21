@@ -126,7 +126,7 @@ impl Config
         }
     }
 
-    pub fn insert<S: AsRef<str>>(&mut self, field: S, range: Range<usize>) -> Result<()>
+    pub fn update<S: AsRef<str>>(&mut self, field: S, range: Range<usize>) -> Result<()>
     {
         let field = field.as_ref();
 
@@ -353,7 +353,7 @@ mod test
     }
 
     #[test]
-    fn insert()
+    fn update()
     {
         let test = r##"
     {
@@ -364,13 +364,13 @@ mod test
         }
     }"##;
         let mut config = Config::new(test as &str).unwrap();
-        config.insert("CinematicProgram", 0xFFFFFF..0x000000).unwrap();
+        config.update("CinematicProgram", 0xFFFFFF..0x000000).unwrap();
         let config = format!("{}", config.config);
         assert_eq!(config, r##"{"assembly":{"CinematicProgram":{"range":"0xFFFFFF-0x000000"}}}"##);
     }
 
     #[test]
-    fn insert_error()
+    fn update_error()
     {
         let test = r##"
     {
@@ -381,7 +381,7 @@ mod test
         }
     }"##;
         let mut config = Config::new(test as &str).unwrap();
-        let err = config.insert("NotEntry", 0xFFFFFF..0x000000).unwrap_err();
+        let err = config.update("NotEntry", 0xFFFFFF..0x000000).unwrap_err();
         assert_eq!(
             err.to_string(),
             "Error Parsing: failed to find JSON entry `/assembly/NotEntry/range`"
