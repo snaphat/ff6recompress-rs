@@ -25,13 +25,13 @@ pub struct Config
     config: serde_json::Value,
 }
 
-pub trait SerdeAsTrait
+pub trait SerdeAs
 {
     fn as_usize(&self) -> Option<usize>;
     fn as_string(&self) -> Option<String>;
 }
 
-impl SerdeAsTrait for serde_json::value::Value
+impl SerdeAs for serde_json::value::Value
 {
     fn as_usize(&self) -> Option<usize>
     {

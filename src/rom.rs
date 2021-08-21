@@ -10,14 +10,14 @@ fn conv_addr(addr: usize) -> usize
     if addr & 0x408000 != 0 { addr & 0x3FFFFF } else { 0x0 }
 }
 
-trait TblPtrTrait
+trait TblPtr
 {
     fn splice_ptr(&mut self, r: TblEntry, ptr: usize) -> ();
 
     fn extract_ptr(&self, r: TblEntry) -> usize;
 }
 
-impl TblPtrTrait for [u8]
+impl TblPtr for [u8]
 {
     fn splice_ptr(&mut self, r: TblEntry, ptr: usize) -> ()
     {
