@@ -1,6 +1,6 @@
 use std::{io::Write, ops::Range};
 
-use crate::{error::JsonError, result::Result, util::HexStringTo, JsonError};
+use crate::{error::JsonError, hex::HexStringTo, result::Result, JsonError};
 
 #[derive(Debug)]
 pub struct ExtractedData

@@ -5,11 +5,11 @@ use std::{fs, io};
 mod aplib;
 mod error;
 mod hash;
+mod hex;
 mod json;
 mod lzss;
 mod result;
 mod rom;
-mod util;
 
 fn open(path: &str) -> Result<Vec<u8>, io::Error>
 {
