@@ -73,7 +73,7 @@ impl Rom
         Rom { rom: bytes, saved_bytes: 0, config: json::Config::default() }
     }
 
-    pub fn _recompress(&mut self, offset: usize) -> Result<Vec<u8>>
+    fn _recompress(&mut self, offset: usize) -> Result<Vec<u8>>
     {
         let (uncompressed, orig_compressed_size) = lzss::decompress(&self.rom[offset..])?;
         let recompressed = aplib::compress(&uncompressed)?;
@@ -93,10 +93,10 @@ impl Rom
     }
 
     #[rustfmt::skip]
-    pub fn recompress(&mut self, json_entry: &str) -> Result<()>
+    pub fn recompress <S: AsRef<str>>(&mut self, json_entry: S) -> Result<()>
     {
         // Extract data pointer logic.
-        let data = self.config.extract(json_entry)?;
+        let data = self.config.extract(&json_entry)?;
         print!(" \x1b[33m-\x1b[36m {}\x1b[33m...\x1b[39m", data.name);
         stdout().flush().unwrap();
         let data_range = match data.table
@@ -164,7 +164,7 @@ impl Rom
         };
 
         // Insert updated json entry with new data range.
-        self.config.update(json_entry, data_range)?;
+        self.config.update(&json_entry, data_range)?;
 
         println!("{:width$}\x1b[31mdone\x1b[39m", "", width = (55 - data.name.len()));
 
@@ -211,6 +211,12 @@ impl Rom
 
         println!("\n\x1b[33mTotal savings (bytes)\x1b[36m: \x1b[32m{}\x1b[39m", self.saved_bytes);
 
+        Ok(())
+    }
+
+    pub fn save<S: AsRef<str>>(&self, filename: S) -> Result<()>
+    {
+        self.config.save(filename)?;
         Ok(())
     }
 }

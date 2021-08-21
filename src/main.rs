@@ -20,17 +20,15 @@ fn open(path: &str) -> Result<Vec<u8>, io::Error>
 
 fn main()
 {
-    let mut rom = match open("Final Fantasy III (USA) (Rev 1).sfc")
-    {
-        | Ok(bytes) => rom::Rom::new(bytes),
-        | Err(e) =>
-        {
-            println!("{}", e);
-            return;
-        },
+    let func = || -> Result<(), error::Error> {
+        let bytes = open("Final Fantasy III (USA) (Rev 1).sfc")?;
+        let mut rom = rom::Rom::new(bytes);
+        rom.process()?;
+        rom.save("test")?;
+        Ok(())
     };
 
-    match rom.process()
+    match func()
     {
         | Err(e) => println!("{}", e),
         | _ => (),
