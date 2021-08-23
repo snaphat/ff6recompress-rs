@@ -9,6 +9,7 @@ edition = "2018"
 
 [dependencies]
 hex = "0.4"
+len-trait = "0.6"
 num-traits = "0.2"
 paste= "1"
 serde_json = "1"

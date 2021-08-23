@@ -4,7 +4,14 @@ use std::{
     ops::AddAssign,
 };
 
-use crate::{aplib, error::IndexError, hash::HashOne, json, lzss, result::Result};
+use crate::{
+    aplib,
+    checked_get::CheckedGet,
+    error::Error::{ExtractPtrError, SplicePtrError},
+    hash::HashOne,
+    json, lzss,
+    result::Result,
+};
 fn conv_addr(addr: usize) -> usize
 {
     if addr & 0x408000 != 0 { addr & 0x3FFFFF } else { 0x0 }
@@ -22,10 +29,10 @@ impl TblPtr for [u8]
     fn splice_ptr(&mut self, r: TblEntry, ptr: usize) -> Result<()>
     {
         let mut ptr = ptr; // store mutable copy.
-        let tbl_entry = self.get_mut(r.idx..r.idx + r.len).ok_or(IndexError())?;
+        let entry = self.get_checked_mut(r.idx..r.idx + r.len).map_err(|e| SplicePtrError(e))?;
         for i in 0..r.len
         {
-            tbl_entry[i] = ptr as u8; // store in big endian.
+            entry[i] = ptr as u8; // store in big endian.
             ptr >>= 8; // shift right.
         }
         Ok(())
@@ -33,11 +40,12 @@ impl TblPtr for [u8]
 
     fn extract_ptr(&self, r: TblEntry) -> Result<usize>
     {
-        let mut ptr: usize = 0;
-        let tbl_entry = self.get(r.idx..r.idx + r.len).ok_or(IndexError())?;
+        let mut ptr: usize = 0; // store empty ptr.
+        let entry = self.get_checked(r.idx..r.idx + r.len).map_err(|e| ExtractPtrError(e))?;
         for i in 0..r.len
         {
-            ptr += (tbl_entry[i] as usize) << (8 * i);
+            let t = entry[i] as usize; // promote.
+            ptr += t << (8 * i); // shift left.
         }
         Ok(ptr)
     }
@@ -74,7 +82,8 @@ impl Rom
 
     fn _recompress(&mut self, offset: usize) -> Result<Vec<u8>>
     {
-        let (uncompressed, orig_compressed_size) = lzss::decompress(&self.rom[offset..])?;
+        let (uncompressed, orig_compressed_size) =
+            lzss::decompress(&self.rom.get_checked(offset..).map_err(|e| ExtractPtrError(e))?)?;
         let recompressed = aplib::compress(&uncompressed)?;
 
         if recompressed.len() > orig_compressed_size
@@ -217,3 +226,41 @@ impl Rom
         Ok(())
     }
 }
+
+// #[cfg(test)]
+// mod test
+// {
+//     use super::Rom;
+
+//     #[test]
+//     fn recompress_oob_error()
+//     {
+//         let bytes = vec![
+//             0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
+//             0x0E, 0x0F,
+//         ];
+//         let mut rom = Rom::new(bytes);
+//         let err = rom.recompress("creditsGraphics").unwrap_err();
+
+//         assert_eq!(
+//             err.to_string(),
+//             "Extract Pointer Error: `range end index 2561619 out of range for slice of length 16`"
+//         );
+//     }
+
+//     #[test]
+//     fn process_oob_error()
+//     {
+//         let bytes = vec![
+//             0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
+//             0x0E, 0x0F,
+//         ];
+//         let mut rom = Rom::new(bytes);
+//         let err = rom.process().unwrap_err();
+
+//         assert_eq!(
+//             err.to_string(),
+//             "Extract Pointer Error: `range end index 2561619 out of range for slice of length 16`"
+//         );
+//     }
+// }

@@ -52,12 +52,15 @@ pub enum Error
     #[error("Error Opening File: `{source}`")]
     FromIOError { #[from] source: std::io::Error },
 
+    // CheckedGet Wrappers::
+    #[error("Extract Pointer Error: `{0}`")]
+    ExtractPtrError (crate::checked_get::Error),
+    #[error("Splice Pointer Error: `{0}`")]
+    SplicePtrError (crate::checked_get::Error),
+
     // Zero Parameter Errors:
     #[error("Error Parsing: empty hex string")]
     HexEmptyError(),
-
-    #[error("Error: Index out of bounds")]
-    IndexError(),
 
     // Single Parameter Errors:
     #[error("Decompression Error: `{0}`")]
@@ -77,6 +80,6 @@ pub enum Error
     #[error("Error Parsing: number `0x{0}` number would be zero for non-zero type for hex string `{1}`")]
     HexZeroError(String, String),
 }
-nil_param_fn!(HexEmptyError, IndexError);
+nil_param_fn!(HexEmptyError);
 one_param_fn!(DecompressionError, JsonError, HexError, HexRangeError);
 two_param_fn!(HexNegOverflowError, HexPosOverflowError, HexZeroError);
