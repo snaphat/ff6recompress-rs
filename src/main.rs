@@ -3,6 +3,7 @@
 use std::{fs, io};
 
 mod aplib;
+mod checked_get;
 mod error;
 mod hash;
 mod hex;
@@ -19,6 +20,7 @@ fn open(path: &str) -> Result<Vec<u8>, io::Error>
     //file.read_to_string(&mut contents)?;
 }
 
+// FIXME: Add checksum
 fn main()
 {
     let func = || -> Result<(), error::Error> {

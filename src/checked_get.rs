@@ -1,14 +1,12 @@
-use std::{
-    ops::{Bound, Index, IndexMut, Range, RangeBounds, RangeFull},
-    slice::SliceIndex,
-};
+use std::ops::{self, Bound, RangeBounds};
 
-use len_trait::{index::IndexRange, IndexRangeMut, Len};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error
 {
+    #[error("index {0} out of range for slice of length {1}")]
+    IndexError(usize, usize),
     #[error("range start index {0} out of range for slice of length {1}")]
     StartIndexError(usize, usize),
     #[error("range end index {0} out of range for slice of length {1}")]
@@ -20,98 +18,197 @@ pub enum Error
     EndIndexOverflowError(),
 }
 
-pub trait CheckedGet: IndexRange<usize> + IndexRangeMut<usize> + Len
+pub trait GetCheckedSlice<T: ?Sized>
 {
-    fn get_checked<I>(&self, index: I) -> Result<&<Self as Index<I>>::Output, Error>
-    where
-        I: RangeBounds<usize>,
-        Self: Index<I>,
+    type Output: ?Sized;
+    fn get_checked(self, slice: &T) -> Result<&Self::Output, Error>;
+}
+
+impl<T> GetCheckedSlice<[T]> for usize
+{
+    type Output = T;
+
+    #[inline]
+    fn get_checked(self, slice: &[T]) -> Result<&T, Error>
     {
-        let start = match index.start_bound()
+        // SAFETY: `self` is checked to be in bounds.
+        if self < slice.len()
         {
-            | Bound::Included(x) => *x,
-            | Bound::Excluded(x) => x.checked_add(1).ok_or(Error::StartIndexOverflowError())?,
-            | Bound::Unbounded => 0,
-        };
-
-        let end = match index.end_bound()
-        {
-            | Bound::Included(x) => x.checked_add(1).ok_or(Error::EndIndexOverflowError())?,
-            | Bound::Excluded(x) => *x,
-            | Bound::Unbounded => self.len(),
-        };
-
-        if start > end
-        {
-            return Err(Error::StartIndexError(start, end));
+            unsafe { Ok(&*slice.get_unchecked(self)) }
         }
-
-        let len = self.len();
-
-        if start > len
+        else
         {
-            return Err(Error::StartIndexError(start, self.len()));
+            Err(Error::IndexError(self, slice.len()))
         }
-
-        if end > len
-        {
-            return Err(Error::EndIndexError(end, self.len()));
-        }
-        Ok(&self[index])
-    }
-
-    fn get_checked_mut<I>(&mut self, index: I) -> Result<&mut <Self as Index<I>>::Output, Error>
-    where
-        I: RangeBounds<usize>,
-        Self: IndexMut<I>,
-    {
-        let start = match index.start_bound()
-        {
-            | Bound::Included(x) => *x,
-            | Bound::Excluded(x) => x.checked_add(1).ok_or(Error::StartIndexOverflowError())?,
-            | Bound::Unbounded => 0,
-        };
-
-        let end = match index.end_bound()
-        {
-            | Bound::Included(x) => x.checked_add(1).ok_or(Error::EndIndexOverflowError())?,
-            | Bound::Excluded(x) => *x,
-            | Bound::Unbounded => self.len(),
-        };
-
-        if start > end
-        {
-            return Err(Error::StartIndexError(start, end));
-        }
-
-        let len = self.len();
-
-        if start > len
-        {
-            return Err(Error::StartIndexError(start, self.len()));
-        }
-
-        if end > len
-        {
-            return Err(Error::EndIndexError(end, self.len()));
-        }
-        Ok(&mut self[index])
     }
 }
 
-impl CheckedGet for [u8] {}
+impl<T> GetCheckedSlice<[T]> for ops::Range<usize>
+{
+    type Output = [T];
+
+    #[inline]
+    fn get_checked(self, slice: &[T]) -> Result<&[T], Error>
+    {
+        let len = slice.len();
+        if self.start > self.end
+        {
+            Err(Error::StartIndexError(self.start, self.end))
+        }
+        else if self.end > len
+        {
+            Err(Error::EndIndexError(self.end, len))
+        }
+        else
+        {
+            unsafe { Ok(&*slice.get_unchecked(self)) }
+        }
+    }
+}
+
+impl<T> GetCheckedSlice<[T]> for ops::RangeTo<usize>
+{
+    type Output = [T];
+
+    #[inline]
+    fn get_checked(self, slice: &[T]) -> Result<&[T], Error>
+    {
+        (0..self.end).get_checked(slice)
+    }
+}
+
+impl<T> GetCheckedSlice<[T]> for ops::RangeFrom<usize>
+{
+    type Output = [T];
+
+    #[inline]
+    fn get_checked(self, slice: &[T]) -> Result<&[T], Error>
+    {
+        (self.start..slice.len()).get_checked(slice)
+    }
+}
+
+impl<T> GetCheckedSlice<[T]> for ops::RangeFull
+{
+    type Output = [T];
+
+    #[inline]
+    fn get_checked(self, slice: &[T]) -> Result<&[T], Error>
+    {
+        Ok(slice)
+    }
+}
+
+impl<T> GetCheckedSlice<[T]> for ops::RangeInclusive<usize>
+{
+    type Output = [T];
+
+    #[inline]
+    fn get_checked(self, slice: &[T]) -> Result<&[T], Error>
+    {
+        if *self.end() == usize::MAX
+        {
+            Err(Error::EndIndexOverflowError())
+        }
+        else
+        {
+            let start = match self.start_bound()
+            {
+                | Bound::Included(x) => *x,
+                | Bound::Excluded(x) => x.checked_add(1).ok_or(Error::StartIndexOverflowError())?,
+                | Bound::Unbounded => 0,
+            };
+
+            let end = match self.end_bound()
+            {
+                | Bound::Included(x) => x.checked_add(1).ok_or(Error::EndIndexOverflowError())?,
+                | Bound::Excluded(x) => *x,
+                | Bound::Unbounded => slice.len(),
+            };
+
+            let len = slice.len();
+
+            match slice
+            {
+                | _ if start > end => Err(Error::StartIndexError(start, end))?,
+                | _ if start > len => Err(Error::StartIndexError(start, slice.len()))?,
+                | _ if end > len => Err(Error::EndIndexError(end, slice.len()))?,
+                | _ => Ok(unsafe { &*slice.get_unchecked(self) }),
+            }
+        }
+    }
+}
+
+impl<T> GetCheckedSlice<[T]> for ops::RangeToInclusive<usize>
+{
+    type Output = [T];
+
+    #[inline]
+    fn get_checked(self, slice: &[T]) -> Result<&[T], Error>
+    {
+        (0..=self.end).get_checked(slice)
+    }
+}
+
+pub trait GetChecked<I>
+{
+    #[inline]
+    fn get_checked<T>(&self, index: T) -> Result<&T::Output, Error>
+    where T: GetCheckedSlice<Self>
+    {
+        index.get_checked(self)
+    }
+}
+
+impl<T> GetChecked<T> for [T] {}
 
 #[cfg(test)]
 mod test
 {
-    use super::{CheckedGet, Error};
+    use super::{Error, GetChecked};
+
+    #[test]
+    fn index()
+    {
+        let bytes = vec![
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
+        ];
+
+        let ret = *bytes.get_checked(4).unwrap();
+        assert_eq!(ret, bytes[4]);
+    }
+
+    #[test]
+    fn index_edge()
+    {
+        let bytes = vec![
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
+        ];
+
+        let ret = *bytes.get_checked(15).unwrap();
+        assert_eq!(ret, bytes[15]);
+    }
+
+    #[test]
+    fn index_error()
+    {
+        let bytes = vec![
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
+        ];
+
+        let err = bytes.get_checked(16).unwrap_err();
+        assert_eq!(err.to_string(), "index 16 out of range for slice of length 16");
+    }
 
     #[test]
     fn range_full()
     {
         let bytes = vec![
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
-            0x0E, 0x0F,
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
         ];
 
         let ret = bytes.get_checked(..).unwrap();
@@ -123,8 +220,8 @@ mod test
     fn range_full_exclusive()
     {
         let bytes = vec![
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
-            0x0E, 0x0F,
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
         ];
 
         let ret = bytes.get_checked(2..5).unwrap();
@@ -136,8 +233,8 @@ mod test
     fn range_full_inclusive()
     {
         let bytes = vec![
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
-            0x0E, 0x0F,
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
         ];
 
         let ret = bytes.get_checked(2..=5).unwrap();
@@ -149,8 +246,8 @@ mod test
     fn range_full_zero_exclusive()
     {
         let bytes = vec![
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
-            0x0E, 0x0F,
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
         ];
 
         let ret = bytes.get_checked(0..0).unwrap();
@@ -162,8 +259,8 @@ mod test
     fn range_full_zero_inclusive()
     {
         let bytes = vec![
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
-            0x0E, 0x0F,
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
         ];
 
         let ret = bytes.get_checked(0..=0).unwrap();
@@ -175,8 +272,8 @@ mod test
     fn range_from()
     {
         let bytes = vec![
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
-            0x0E, 0x0F,
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
         ];
 
         let ret = bytes.get_checked(5..).unwrap();
@@ -188,8 +285,8 @@ mod test
     fn range_from_zero()
     {
         let bytes = vec![
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
-            0x0E, 0x0F,
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
         ];
 
         let ret = bytes.get_checked(16..).unwrap();
@@ -201,8 +298,8 @@ mod test
     fn range_from_oob_error()
     {
         let bytes = vec![
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
-            0x0E, 0x0F,
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
         ];
 
         let err = bytes.get_checked(17..).unwrap_err();
@@ -213,8 +310,8 @@ mod test
     fn range_from_inverse_error()
     {
         let bytes = vec![
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
-            0x0E, 0x0F,
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
         ];
 
         let err = bytes.get_checked(17..5).unwrap_err();
@@ -225,8 +322,8 @@ mod test
     fn range_to_exclusive()
     {
         let bytes = vec![
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
-            0x0E, 0x0F,
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
         ];
 
         let ret = bytes.get_checked(..5).unwrap();
@@ -238,8 +335,8 @@ mod test
     fn range_to_inclusive()
     {
         let bytes = vec![
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
-            0x0E, 0x0F,
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
         ];
 
         let ret = bytes.get_checked(..=5).unwrap();
@@ -251,8 +348,8 @@ mod test
     fn range_overflow_error()
     {
         let bytes = vec![
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
-            0x0E, 0x0F,
+            0xA0, 0x11, 0xB2, 0xD3, 0x0F4, 0x35, 0x66, 0x17, 0x53, 0x65, 0xDA, 0xCB, 0x4C, 0xD5,
+            0x3E, 0x1F,
         ];
 
         let err = bytes.get_checked(0..=usize::MAX).unwrap_err();

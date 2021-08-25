@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     aplib,
-    checked_get::CheckedGet,
+    checked_get::GetChecked,
     error::Error::{ExtractPtrError, SplicePtrError},
     hash::HashOne,
     json, lzss,
@@ -29,7 +29,7 @@ impl TblPtr for [u8]
     fn splice_ptr(&mut self, r: TblEntry, ptr: usize) -> Result<()>
     {
         let mut ptr = ptr; // store mutable copy.
-        let entry = self.get_checked_mut(r.idx..r.idx + r.len).map_err(|e| SplicePtrError(e))?;
+        let entry = &mut self[r.idx..r.idx + r.len];
         for i in 0..r.len
         {
             entry[i] = ptr as u8; // store in big endian.
