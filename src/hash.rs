@@ -14,7 +14,7 @@ pub trait HashOne: Hash
 impl HashOne for [u8] {}
 
 #[cfg(test)]
-mod test
+mod tests
 {
     use super::HashOne;
 

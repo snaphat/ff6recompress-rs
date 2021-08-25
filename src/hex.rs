@@ -99,7 +99,7 @@ impl HexStringTo for &str
 }
 
 #[cfg(test)] #[rustfmt::skip]
-mod test
+mod tests
 {
     use super::HexStringTo;
 

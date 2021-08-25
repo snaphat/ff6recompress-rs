@@ -104,7 +104,7 @@ pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize)>
 }
 
 #[cfg(test)]
-mod test
+mod tests
 {
     use super::decompress;
 

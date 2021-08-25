@@ -262,7 +262,7 @@ pub trait GetChecked<I>
 impl<T> GetChecked<T> for [T] {}
 
 #[cfg(test)]
-mod test
+mod tests
 {
     use super::{Error, GetChecked};
 

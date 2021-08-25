@@ -26,7 +26,7 @@ pub fn decompress(input: &[u8]) -> Result<Vec<u8>>
 }
 
 #[cfg(test)]
-mod test
+mod tests
 {
     #[test]
     fn compress()
