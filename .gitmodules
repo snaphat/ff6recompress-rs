@@ -1,3 +1,6 @@
 [submodule "apultra-rs"]
 	path = apultra-rs
 	url = https://github.com/snaphat/apultra-rs
+[submodule "get_checked-rs"]
+	path = get_checked-rs
+	url = https://github.com/snaphat/get_checked-rs

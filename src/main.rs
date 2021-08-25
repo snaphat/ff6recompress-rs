@@ -4,7 +4,6 @@ use std::{fs, io};
 
 mod aplib;
 mod error;
-mod get_checked;
 mod hash;
 mod hex;
 mod json;

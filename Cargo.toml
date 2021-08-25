@@ -17,3 +17,5 @@ tempfile = "3"
 thiserror = "1"
 [dependencies.apultra]
 path = "apultra-rs"
+[dependencies.get_checked]
+path = "get_checked-rs"

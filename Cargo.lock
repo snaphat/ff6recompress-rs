@@ -59,12 +59,20 @@ name = "ff6recompress"
 version = "0.1.0"
 dependencies = [
  "apultra",
+ "get_checked",
  "hex",
  "len-trait",
  "num-traits",
  "paste",
  "serde_json",
  "tempfile",
+ "thiserror",
+]
+
+[[package]]
+name = "get_checked"
+version = "0.1.0"
+dependencies = [
  "thiserror",
 ]
 
