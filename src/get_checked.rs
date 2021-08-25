@@ -22,6 +22,7 @@ pub trait GetCheckedSlice<T: ?Sized>
 {
     type Output: ?Sized;
     fn get_checked(self, slice: &T) -> Result<&Self::Output, Error>;
+    fn get_checked_mut(self, slice: &mut T) -> Result<&mut Self::Output, Error>;
 }
 
 impl<T> GetCheckedSlice<[T]> for usize
@@ -35,6 +36,20 @@ impl<T> GetCheckedSlice<[T]> for usize
         if self < slice.len()
         {
             unsafe { Ok(&*slice.get_unchecked(self)) }
+        }
+        else
+        {
+            Err(Error::IndexError(self, slice.len()))
+        }
+    }
+
+    #[inline]
+    fn get_checked_mut(mut self, slice: &mut [T]) -> Result<&mut T, Error>
+    {
+        // SAFETY: `self` is checked to be in bounds.
+        if self < slice.len()
+        {
+            unsafe { Ok(&mut *slice.get_unchecked_mut(self)) }
         }
         else
         {
@@ -64,6 +79,24 @@ impl<T> GetCheckedSlice<[T]> for ops::Range<usize>
             unsafe { Ok(&*slice.get_unchecked(self)) }
         }
     }
+
+    #[inline]
+    fn get_checked_mut(self, slice: &mut [T]) -> Result<&mut [T], Error>
+    {
+        let len = slice.len();
+        if self.start > self.end
+        {
+            Err(Error::StartIndexError(self.start, self.end))
+        }
+        else if self.end > len
+        {
+            Err(Error::EndIndexError(self.end, len))
+        }
+        else
+        {
+            unsafe { Ok(&mut *slice.get_unchecked_mut(self)) }
+        }
+    }
 }
 
 impl<T> GetCheckedSlice<[T]> for ops::RangeTo<usize>
@@ -74,6 +107,12 @@ impl<T> GetCheckedSlice<[T]> for ops::RangeTo<usize>
     fn get_checked(self, slice: &[T]) -> Result<&[T], Error>
     {
         (0..self.end).get_checked(slice)
+    }
+
+    #[inline]
+    fn get_checked_mut(mut self, slice: &mut [T]) -> Result<&mut [T], Error>
+    {
+        (0..self.end).get_checked_mut(slice)
     }
 }
 
@@ -86,6 +125,12 @@ impl<T> GetCheckedSlice<[T]> for ops::RangeFrom<usize>
     {
         (self.start..slice.len()).get_checked(slice)
     }
+
+    #[inline]
+    fn get_checked_mut(mut self, slice: &mut [T]) -> Result<&mut [T], Error>
+    {
+        (self.start..slice.len()).get_checked_mut(slice)
+    }
 }
 
 impl<T> GetCheckedSlice<[T]> for ops::RangeFull
@@ -94,6 +139,12 @@ impl<T> GetCheckedSlice<[T]> for ops::RangeFull
 
     #[inline]
     fn get_checked(self, slice: &[T]) -> Result<&[T], Error>
+    {
+        Ok(slice)
+    }
+
+    #[inline]
+    fn get_checked_mut(mut self, slice: &mut [T]) -> Result<&mut [T], Error>
     {
         Ok(slice)
     }
@@ -137,6 +188,41 @@ impl<T> GetCheckedSlice<[T]> for ops::RangeInclusive<usize>
             }
         }
     }
+
+    #[inline]
+    fn get_checked_mut(mut self, slice: &mut [T]) -> Result<&mut [T], Error>
+    {
+        if *self.end() == usize::MAX
+        {
+            Err(Error::EndIndexOverflowError())
+        }
+        else
+        {
+            let start = match self.start_bound()
+            {
+                | Bound::Included(x) => *x,
+                | Bound::Excluded(x) => x.checked_add(1).ok_or(Error::StartIndexOverflowError())?,
+                | Bound::Unbounded => 0,
+            };
+
+            let end = match self.end_bound()
+            {
+                | Bound::Included(x) => x.checked_add(1).ok_or(Error::EndIndexOverflowError())?,
+                | Bound::Excluded(x) => *x,
+                | Bound::Unbounded => slice.len(),
+            };
+
+            let len = slice.len();
+
+            match slice
+            {
+                | _ if start > end => Err(Error::StartIndexError(start, end))?,
+                | _ if start > len => Err(Error::StartIndexError(start, slice.len()))?,
+                | _ if end > len => Err(Error::EndIndexError(end, slice.len()))?,
+                | _ => Ok(unsafe { &mut *slice.get_unchecked_mut(self) }),
+            }
+        }
+    }
 }
 
 impl<T> GetCheckedSlice<[T]> for ops::RangeToInclusive<usize>
@@ -148,6 +234,12 @@ impl<T> GetCheckedSlice<[T]> for ops::RangeToInclusive<usize>
     {
         (0..=self.end).get_checked(slice)
     }
+
+    #[inline]
+    fn get_checked_mut(mut self, slice: &mut [T]) -> Result<&mut [T], Error>
+    {
+        (0..=self.end).get_checked_mut(slice)
+    }
 }
 
 pub trait GetChecked<I>
@@ -157,6 +249,13 @@ pub trait GetChecked<I>
     where T: GetCheckedSlice<Self>
     {
         index.get_checked(self)
+    }
+
+    #[inline]
+    fn get_checked_mut<T>(&mut self, index: T) -> Result<&mut T::Output, Error>
+    where T: GetCheckedSlice<Self>
+    {
+        index.get_checked_mut(self)
     }
 }
 

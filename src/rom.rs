@@ -6,8 +6,8 @@ use std::{
 
 use crate::{
     aplib,
-    get_checked::GetChecked,
     error::Error::{ExtractPtrError, SplicePtrError},
+    get_checked::GetChecked,
     hash::HashOne,
     json, lzss,
     result::Result,

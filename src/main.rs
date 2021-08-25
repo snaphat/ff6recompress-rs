@@ -3,8 +3,8 @@
 use std::{fs, io};
 
 mod aplib;
-mod get_checked;
 mod error;
+mod get_checked;
 mod hash;
 mod hex;
 mod json;
