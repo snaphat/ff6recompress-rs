@@ -3,7 +3,7 @@
 use std::{fs, io};
 
 mod aplib;
-mod checked_get;
+mod get_checked;
 mod error;
 mod hash;
 mod hex;

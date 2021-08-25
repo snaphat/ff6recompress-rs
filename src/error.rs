@@ -54,9 +54,9 @@ pub enum Error
 
     // CheckedGet Wrappers::
     #[error("Extract Pointer Error: `{0}`")]
-    ExtractPtrError (crate::checked_get::Error),
+    ExtractPtrError (crate::get_checked::Error),
     #[error("Splice Pointer Error: `{0}`")]
-    SplicePtrError (crate::checked_get::Error),
+    SplicePtrError (crate::get_checked::Error),
 
     // Zero Parameter Errors:
     #[error("Error Parsing: empty hex string")]
