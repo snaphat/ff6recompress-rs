@@ -16,9 +16,13 @@ pub fn compress(input: &[u8]) -> Result<Vec<u8>>
 
 pub fn decompress(input: &[u8]) -> Result<Vec<u8>>
 {
+    if input.len() < 2
+    {
+        return Err(DecompressionError("Invalid size (<2)"));
+    }
     if input[0] != 0xFF || input[1] != 0xFF
     {
-        return Err(DecompressionError("Invalid Header"));
+        return Err(DecompressionError("Invalid header"));
     }
     let dictionary_size = 0;
     let flags = 0;
@@ -47,10 +51,18 @@ mod tests
     }
 
     #[test]
+    fn decompress_size_error()
+    {
+        let input_data: Vec<u8> = vec![0];
+        let err = super::decompress(&input_data).unwrap_err();
+        assert_eq!(err.to_string(), "Decompression Error: `Invalid size (<2)`");
+    }
+
+    #[test]
     fn decompress_header_error()
     {
         let input_data: Vec<u8> = vec![0, 173, 1, 86, 192, 0];
         let err = super::decompress(&input_data).unwrap_err();
-        assert_eq!("Decompression Error: `Invalid Header`", err.to_string());
+        assert_eq!(err.to_string(), "Decompression Error: `Invalid header`");
     }
 }

@@ -6,11 +6,13 @@ pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize)>
     // Check if the input is long enough to contain length bytes.
     if input.len() < 2
     {
-        return Err(DecompressionError("LZSS: Input data too short"));
+        return Err(DecompressionError("LZSS: Input data too short (<2)"));
     }
 
     // Get length of compressed data.
-    let length = input[0] as usize | (input[1] as usize) << 8;
+    let low = unsafe { *input.get_unchecked(0) } as usize;
+    let high = unsafe { *input.get_unchecked(1) as usize } << 8;
+    let length = high | low;
 
     // Check if length valid.
     if length == 0
@@ -29,7 +31,7 @@ pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize)>
     }
 
     // Get slice of data of the exact length (for OoB handling).
-    let mut src = input[2..length].iter();
+    let mut src = unsafe { input.get_unchecked(2..length) }.iter();
     let s = RefCell::new(2); // Source index.
 
     // Smart wrapper for iterator. Returns DecompressionError if iterating past the end of the buffer.
@@ -68,7 +70,8 @@ pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize)>
                 // single byte (uncompressed)
                 let c = next()?;
                 line.push(c);
-                buffer[b] = c;
+                let ptr = unsafe { buffer.get_unchecked_mut(b) };
+                *ptr = c;
                 b = b + 1 & 0x7FF;
             }
             else
@@ -81,9 +84,10 @@ pub fn decompress(input: &[u8]) -> Result<(Vec<u8>, usize)>
 
                 for i in 0..r
                 {
-                    let c = buffer[(w + i) & 0x07FF];
+                    let c = unsafe { *buffer.get_unchecked((w + i) & 0x07FF) };
                     line.push(c);
-                    buffer[b] = c;
+                    let ptr = unsafe { buffer.get_unchecked_mut(b) };
+                    *ptr = c;
                     b = b + 1 & 0x7FF;
                 }
             }
@@ -120,7 +124,7 @@ mod tests
     fn decompression_error_data_too_short()
     {
         let err = decompress(&[0]).unwrap_err();
-        assert_eq!(err.to_string(), "Decompression Error: `LZSS: Input data too short`");
+        assert_eq!(err.to_string(), "Decompression Error: `LZSS: Input data too short (<2)`");
     }
 
     #[test]
