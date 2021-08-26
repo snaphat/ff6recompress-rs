@@ -20,13 +20,19 @@ pub fn decompress(input: &[u8]) -> Result<Vec<u8>>
     {
         return Err(DecompressionError("Invalid size (<2)"));
     }
-    if input[0] != 0xFF || input[1] != 0xFF
+
+    let low = unsafe { *input.get_unchecked(0) } as usize;
+    let high = unsafe { *input.get_unchecked(1) } as usize;
+
+    if high != 0xFF || low != 0xFF
     {
         return Err(DecompressionError("Invalid header"));
     }
     let dictionary_size = 0;
     let flags = 0;
-    Ok(apultra::decompress(&input[2..], dictionary_size, flags)?)
+
+    let buf = unsafe { input.get_unchecked(2..) };
+    Ok(apultra::decompress(buf, dictionary_size, flags)?)
 }
 
 #[cfg(test)]
