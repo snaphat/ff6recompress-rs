@@ -39,32 +39,44 @@ macro_rules! two_param_fn {
     }
 }
 
-#[derive(Error, Debug)] #[rustfmt::skip]
+#[derive(Error, Debug)]
 pub enum Error
 {
-    // Transparent Errors:
-    #[error(transparent)]
-    TransApultraError { #[from] source: apultra::Error },
+    // Aplib Errors:
+    #[error("Aplib {source}")] #[rustfmt::skip]
+    AplibApultraError { #[from] source: apultra::Error },
+    #[error("Aplib Decompression Error: Header too short (<2)")]
+    AplibDecompressShortHeaderError(),
+    #[error("Aplib Decompression Error: Invalid header")]
+    AplibDecompressInvalidheaderError(),
+
+    // LZSS Errors:
+    #[error("LZSS Decompression Error: Invalid compression length of 0")]
+    LZSSDecompressZeroError(),
+    #[error("LZSS Decompression Error: Input data too short (<2)")]
+    LZSSDecompressInputError(),
+    #[error("LZSS Decompression Error: Iterated past end of input buffer (>{0})")]
+    LZSSDecompressOOBError(usize),
+    #[error("LZSS Decompression Error: Buffer length is less than decoded data size ({0}<{1})")]
+    LZSSDecompressSizeError(usize, usize),
 
     // From Errors:
-    #[error("Error Parsing JSON: `{source}`")]
+    #[error("Error Parsing JSON: `{source}`")]  #[rustfmt::skip]
     FromJsonError { #[from] source: serde_json::Error },
-    #[error("Error Opening File: `{source}`")]
+    #[error("Error Opening File: `{source}`")]  #[rustfmt::skip]
     FromIOError { #[from] source: std::io::Error },
 
     // CheckedGet Wrappers::
     #[error("Extract Pointer Error: `{0}`")]
-    ExtractPtrError (get_checked::Error),
+    ExtractPtrError(get_checked::Error),
     #[error("Splice Pointer Error: `{0}`")]
-    SplicePtrError (get_checked::Error),
+    SplicePtrError(get_checked::Error),
 
     // Zero Parameter Errors:
     #[error("Error Parsing: empty hex string")]
     HexEmptyError(),
 
     // Single Parameter Errors:
-    #[error("Decompression Error: `{0}`")]
-    DecompressionError(String),
     #[error("Error Parsing: failed to find JSON entry `{0}`")]
     JsonError(String),
     #[error("Error Parsing: invalid hex string `{0}`")]
@@ -77,9 +89,11 @@ pub enum Error
     HexNegOverflowError(String, String),
     #[error("Error Parsing: number `0x{0}` too large to fit in target type for hex string `{1}`")]
     HexPosOverflowError(String, String),
-    #[error("Error Parsing: number `0x{0}` number would be zero for non-zero type for hex string `{1}`")]
+    #[error(
+        "Error Parsing: number `0x{0}` number would be zero for non-zero type for hex string `{1}`"
+    )]
     HexZeroError(String, String),
 }
 nil_param_fn!(HexEmptyError);
-one_param_fn!(DecompressionError, JsonError, HexError, HexRangeError);
+one_param_fn!(JsonError, HexError, HexRangeError);
 two_param_fn!(HexNegOverflowError, HexPosOverflowError, HexZeroError);

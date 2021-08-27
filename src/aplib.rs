@@ -1,5 +1,7 @@
-use crate::{error::DecompressionError, result::Result};
-
+use crate::{
+    error::Error::{AplibDecompressInvalidheaderError, AplibDecompressShortHeaderError},
+    result::Result,
+};
 pub fn compress(input: &[u8]) -> Result<Vec<u8>>
 {
     let window_size = 0x10000;
@@ -18,7 +20,7 @@ pub fn decompress(input: &[u8]) -> Result<Vec<u8>>
 {
     if input.len() < 2
     {
-        return Err(DecompressionError("Invalid size (<2)"));
+        return Err(AplibDecompressShortHeaderError());
     }
 
     let low = unsafe { *input.get_unchecked(0) } as usize;
@@ -26,7 +28,7 @@ pub fn decompress(input: &[u8]) -> Result<Vec<u8>>
 
     if high != 0xFF || low != 0xFF
     {
-        return Err(DecompressionError("Invalid header"));
+        return Err(AplibDecompressInvalidheaderError());
     }
     let dictionary_size = 0;
     let flags = 0;
@@ -38,6 +40,9 @@ pub fn decompress(input: &[u8]) -> Result<Vec<u8>>
 #[cfg(test)]
 mod tests
 {
+    use std::intrinsics::transmute;
+
+    use super::{AplibDecompressInvalidheaderError, AplibDecompressShortHeaderError};
     #[test]
     fn compress()
     {
@@ -50,25 +55,64 @@ mod tests
     #[test]
     fn decompress()
     {
-        let input_data: Vec<u8> = vec![0xFF, 0xFF, 0, 173, 1, 86, 192, 0];
+        let input_data = vec![0xFF, 0xFF, 0, 173, 1, 86, 192, 0];
         let decompressed = super::decompress(&input_data).unwrap();
         assert_eq!(decompressed.len(), 100);
         assert_eq!(decompressed, [0; 100]);
     }
 
     #[test]
-    fn decompress_size_error()
+    fn compress_size_zero_error()
     {
-        let input_data: Vec<u8> = vec![0];
-        let err = super::decompress(&input_data).unwrap_err();
-        assert_eq!(err.to_string(), "Decompression Error: `Invalid size (<2)`");
+        let input_data = vec![];
+        let err = super::compress(&input_data).unwrap_err();
+        assert_eq!(err.to_string(), "Aplib Compression Error: Input size of zero");
     }
 
     #[test]
-    fn decompress_header_error()
+    fn compress_mem_alloc_error()
     {
-        let input_data: Vec<u8> = vec![0, 173, 1, 86, 192, 0];
+        let raw = [0xFF, 0xFF, 0xFF, 0xFF];
+        let data: &[u8] = unsafe { transmute(raw) };
+        let err = super::compress(&data).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "Aplib Compression Error: memory allocation failed because the memory allocator returned a error"
+        );
+    }
+
+    #[test]
+    fn decompress_short_header_error()
+    {
+        let input_data = vec![0];
         let err = super::decompress(&input_data).unwrap_err();
-        assert_eq!(err.to_string(), "Decompression Error: `Invalid header`");
+        assert_eq!(err.to_string(), AplibDecompressShortHeaderError().to_string());
+    }
+
+    #[test]
+    fn decompress_invalid_header_error()
+    {
+        let input_data = vec![0, 173, 1, 86, 192, 0];
+        let err = super::decompress(&input_data).unwrap_err();
+        assert_eq!(err.to_string(), AplibDecompressInvalidheaderError().to_string());
+    }
+
+    #[test]
+    fn decompress_size_zero_error()
+    {
+        let input_data = vec![0xFF, 0xFF];
+        let err = super::decompress(&input_data).unwrap_err();
+        assert_eq!(err.to_string(), "Aplib Decompression Error: Input size of zero");
+    }
+
+    #[test]
+    fn decompress_mem_alloc_error()
+    {
+        let input_data = vec![0xFF, 0xFF, 0x11];
+        let err = super::decompress(&input_data).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "Aplib Decompression Error: memory allocation failed because the memory allocator returned a error"
+        );
     }
 }
