@@ -77,7 +77,7 @@ mod tests
         let err = super::compress(&data).unwrap_err();
         assert_eq!(
             err.to_string(),
-            "Aplib Compression Error: memory allocation failed because the memory allocator returned a error"
+            "Aplib Compression Error: memory allocation failed because the memory allocator returned an error"
         );
     }
 
@@ -112,7 +112,7 @@ mod tests
         let err = super::decompress(&input_data).unwrap_err();
         assert_eq!(
             err.to_string(),
-            "Aplib Decompression Error: memory allocation failed because the memory allocator returned a error"
+            "Aplib Decompression Error: memory allocation failed because the memory allocator returned an error"
         );
     }
 }
