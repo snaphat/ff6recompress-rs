@@ -112,7 +112,7 @@ mod tests
         let err = super::decompress(&input_data).unwrap_err();
         assert_eq!(
             err.to_string(),
-            "Aplib Decompression Error: memory allocation failed because the memory allocator returned an error"
+            "Aplib Decompression Error: memory allocation failed because the computed capacity exceeded the collection's maximum"
         );
     }
 }
